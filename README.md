@@ -13,10 +13,10 @@
 
 本开关模块为自己家装修使用，只支持零火。没有单火需求所以也没有单火版。
 
-![image](https://github.com/qlwz/esp_relay/tree/master/file/images/正面.png)
-![image](https://github.com/qlwz/esp_relay/tree/master/file/images/反面.png)
-![image](https://github.com/qlwz/esp_relay/tree/master/file/images/成品.png)
-![image](https://github.com/qlwz/esp_relay/tree/master/file/images/LED状态.png)
+![image](https://github.com/qlwz/esp_relay/blob/master/file/images/正面.png)
+![image](https://github.com/qlwz/esp_relay/blob/master/file/images/反面.png)
+![image](https://github.com/qlwz/esp_relay/blob/master/file/images/成品.png)
+![image](https://github.com/qlwz/esp_relay/blob/master/file/images/LED状态.png)
 
 开关模块以ESP-01M为基础实现了一路、二路、三路并附带面板LED指示灯及射频功能
 
@@ -89,10 +89,10 @@ ioBroker相关接入问题可以加QQ群776817275咨询
 
 # 固件截图
 
-![image](https://github.com/qlwz/esp_relay/tree/master/file/images/tab1.png)
-![image](https://github.com/qlwz/esp_relay/tree/master/file/images/tab2.png)
-![image](https://github.com/qlwz/esp_relay/tree/master/file/images/tab3.png)
-![image](https://github.com/qlwz/esp_relay/tree/master/file/images/tab4.png)
+![image](https://github.com/qlwz/esp_relay/blob/master/file/images/tab1.png)
+![image](https://github.com/qlwz/esp_relay/blob/master/file/images/tab2.png)
+![image](https://github.com/qlwz/esp_relay/blob/master/file/images/tab3.png)
+![image](https://github.com/qlwz/esp_relay/blob/master/file/images/tab4.png)
 
 
 感谢各位使用本方法的玩家，欢迎加入QQ群776817275

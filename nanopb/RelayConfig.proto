@@ -1,0 +1,27 @@
+
+syntax = "proto3";
+
+import "nanopb.proto";
+
+message RelayConfigMessage {
+    uint32 led_type = 1 [(nanopb).int_size = IS_8];
+    uint32 led_start = 2 [(nanopb).int_size = IS_16];
+    uint32 led_end = 3 [(nanopb).int_size = IS_16];
+    uint32 power_on_state = 4 [(nanopb).int_size = IS_8];
+    uint32 last_state = 5 [(nanopb).int_size = IS_8];
+    repeated uint32 study_index = 6 [(nanopb).max_count = 4, (nanopb).fixed_count = true];
+    repeated uint32 study = 7 [(nanopb).max_count = 40, (nanopb).fixed_count = true];
+	uint32 led_light = 8 [(nanopb).int_size = IS_8];
+	uint32 led_time = 9 [(nanopb).int_size = IS_8];
+
+	uint32 downlight_ch = 10 [(nanopb).int_size = IS_8];
+	uint32 downlight_index = 11 [(nanopb).int_size = IS_8];
+	repeated uint32 downlight_color = 12 [(nanopb).max_count = 3, (nanopb).fixed_count = true, (nanopb).int_size = IS_8];
+	uint32 downlight_default = 13 [(nanopb).int_size = IS_8];
+	uint32 downlight_interval = 14 [(nanopb).int_size = IS_16];
+
+	uint32 power_mode = 19 [(nanopb).int_size = IS_8];
+
+    uint32 module_type = 20 [(nanopb).int_size = IS_8];
+    uint32 report_interval = 21 [(nanopb).int_size = IS_16];
+}

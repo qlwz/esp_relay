@@ -1,5 +1,4 @@
 #include "Relay.h"
-#include "RelayButton.h"
 #include "RadioReceive.h"
 #include "Rtc.h"
 
@@ -56,19 +55,17 @@ void Relay::init()
         }
     }
 
-    btns = new RelayButton[channels];
-
     strcpy(powerStatTopic, Mqtt::getStatTopic(F("POWER1")).c_str());
 
-    if (config.led_type == 2)
-    {
-        ledTicker = new Ticker();
-    }
     for (uint8_t ch = 0; ch < channels; ch++)
     {
         if (GPIO_PIN[GPIO_KEY1 + ch] != 99)
         {
-            btns[ch].init(this, ch, GPIO_PIN[GPIO_KEY1 + ch]);
+            pinMode(GPIO_PIN[GPIO_KEY1 + ch], INPUT_PULLUP);
+            if (digitalRead(GPIO_PIN[GPIO_KEY1 + ch]))
+            {
+                buttonStateFlag[ch] |= DEBOUNCED_STATE | UNSTABLE_STATE;
+            }
         }
 
         // 0:开关通电时断开  1:开关通电时闭合  2:开关通电时状态与断电前相反  3:开关通电时保持断电前状态
@@ -98,6 +95,20 @@ bool Relay::moduleLed()
         return true;
     }
 #endif
+
+    if (WiFi.status() == WL_CONNECTED && Mqtt::mqttClient.connected())
+    {
+        if (config.led == 0)
+        {
+            Led::on();
+            return true;
+        }
+        else if (config.led == 1)
+        {
+            Led::off();
+            return true;
+        }
+    }
     return false;
 }
 
@@ -105,10 +116,7 @@ void Relay::loop()
 {
     for (size_t ch = 0; ch < channels; ch++)
     {
-        if (GPIO_PIN[GPIO_KEY1 + ch] != 99)
-        {
-            btns[ch].loop();
-        }
+        cheackButton(ch);
     }
 
 #ifdef USE_RCSWITCH
@@ -354,6 +362,16 @@ void Relay::httpHtml(ESP8266WebServer *server)
         radioJs.replace(F("{v2}"), String(config.led_end));
         page += F("</td></tr>");
     }
+    if (GPIO_PIN[GPIO_LED_POWER] != 99 || GPIO_PIN[GPIO_LED_POWER_INV] != 99)
+    {
+        page += F("<tr><td>LED</td><td>");
+        page += F("<label class='bui-radios-label'><input type='radio' name='led' value='0'/><i class='bui-radios'></i> 常亮</label>&nbsp;&nbsp;&nbsp;&nbsp;");
+        page += F("<label class='bui-radios-label'><input type='radio' name='led' value='1'/><i class='bui-radios'></i> 常灭</label>&nbsp;&nbsp;&nbsp;&nbsp;");
+        page += F("<label class='bui-radios-label'><input type='radio' name='led' value='2'/><i class='bui-radios'></i> 闪烁</label><br>未连接WIFI或者MQTT时为快闪");
+        page += F("</td></tr>");
+        radioJs += F("setRadioValue('led', '{v}');");
+        radioJs.replace(F("{v}"), String(config.led));
+    }
 
     page += F("<tr><td>主动上报间隔</td><td><input type='number' min='0' max='3600' name='report_interval' required value='{v}'>&nbsp;秒，0关闭</td></tr>");
     page.replace(F("{v}"), String(config.report_interval));
@@ -538,6 +556,10 @@ void Relay::httpSetting(ESP8266WebServer *server)
     config.power_on_state = server->arg(F("power_on_state")).toInt();
     config.report_interval = server->arg(F("report_interval")).toInt();
 
+    if (server->hasArg(F("led")))
+    {
+        config.led = server->arg(F("led")).toInt();
+    }
     if (server->hasArg(F("power_mode")))
     {
         config.power_mode = server->arg(F("power_mode")).toInt();
@@ -545,10 +567,6 @@ void Relay::httpSetting(ESP8266WebServer *server)
     if (server->hasArg(F("led_type")))
     {
         config.led_type = server->arg(F("led_type")).toInt();
-        if (config.led_type == 2 && !ledTicker)
-        {
-            ledTicker = new Ticker();
-        }
     }
 
     if (server->hasArg(F("led_start")) && server->hasArg(F("led_end")))
@@ -565,9 +583,9 @@ void Relay::httpSetting(ESP8266WebServer *server)
     if (server->hasArg(F("relay_led_time")))
     {
         config.led_time = server->arg(F("relay_led_time")).toInt();
-        if (config.led_type == 2 && ledTicker->active())
+        if (config.led_type == 2 && ledTicker.active())
         {
-            ledTicker->detach();
+            ledTicker.detach();
         }
     }
     checkCanLed(true);
@@ -653,7 +671,7 @@ void Relay::ledPWM(uint8_t ch, bool isOn)
     if (isOn)
     {
         analogWrite(GPIO_PIN[GPIO_LED1 + ch], 0);
-        if (ledTicker->active())
+        if (ledTicker.active())
         {
             for (uint8_t ch2 = 0; ch2 < channels; ch2++)
             {
@@ -662,15 +680,15 @@ void Relay::ledPWM(uint8_t ch, bool isOn)
                     return;
                 }
             }
-            ledTicker->detach();
+            ledTicker.detach();
             Debug::AddInfo(PSTR("ledTicker detach"));
         }
     }
     else
     {
-        if (!ledTicker->active())
+        if (!ledTicker.active())
         {
-            ledTicker->attach_ms(config.led_time, std::bind(&Relay::ledTickerHandle, this));
+            ledTicker.attach_ms(config.led_time, std::bind(&Relay::ledTickerHandle, this));
             Debug::AddInfo(PSTR("ledTicker active"));
         }
     }
@@ -715,9 +733,9 @@ bool Relay::checkCanLed(bool re)
     }
     if (result != Relay::canLed || re)
     {
-        if ((!result || config.led_type != 2) && ledTicker && ledTicker->active())
+        if ((!result || config.led_type != 2) && ledTicker.active())
         {
-            ledTicker->detach();
+            ledTicker.detach();
             Debug::AddInfo(PSTR("ledTicker detach2"));
         }
         Relay::canLed = result;
@@ -773,6 +791,64 @@ void Relay::switchRelay(uint8_t ch, bool isOn, bool isSave)
     if (Relay::canLed)
     {
         led(ch, isOn);
+    }
+}
+
+void Relay::cheackButton(uint8_t ch)
+{
+    if (GPIO_PIN[GPIO_KEY1 + ch] == 99)
+    {
+        return;
+    }
+    bool currentState = digitalRead(GPIO_PIN[GPIO_KEY1 + ch]);
+    if (currentState != ((buttonStateFlag[ch] & UNSTABLE_STATE) != 0))
+    {
+        buttonTimingStart[ch] = millis();
+        buttonStateFlag[ch] ^= UNSTABLE_STATE;
+    }
+    else if (millis() - buttonTimingStart[ch] >= buttonDebounceTime)
+    {
+        if (currentState != ((buttonStateFlag[ch] & DEBOUNCED_STATE) != 0))
+        {
+            buttonTimingStart[ch] = millis();
+            buttonStateFlag[ch] ^= DEBOUNCED_STATE;
+
+            switchCount[ch] += 1;
+            buttonIntervalStart[ch] = millis();
+
+            if (millis() > lastTime[ch] + 300)
+            {
+                switchRelay(ch, !bitRead(lastState, ch), true);
+                lastTime[ch] = millis();
+            }
+        }
+    }
+
+    // 如果经过的时间大于超时并且计数大于0，则填充并重置计数
+    if (switchCount[ch] > 0 && (millis() - buttonIntervalStart[ch]) > specialFunctionTimeout)
+    {
+        Led::led(200);
+        Debug::AddInfo(PSTR("switchCount %d : %d"), ch + 1, switchCount[ch]);
+
+#ifdef USE_RCSWITCH
+        if (switchCount[ch] == 10 && radioReceive)
+        {
+            radioReceive->study(ch);
+        }
+        else if (switchCount[ch] == 12 && radioReceive)
+        {
+            radioReceive->del(ch);
+        }
+        else if (switchCount[ch] == 16 && radioReceive)
+        {
+            radioReceive->delAll();
+        }
+#endif
+        if (switchCount[ch] == 20)
+        {
+            Wifi::setupWifiManager(false);
+        }
+        switchCount[ch] = 0;
     }
 }
 

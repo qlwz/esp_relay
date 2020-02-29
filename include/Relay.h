@@ -28,21 +28,32 @@ enum LightColor
     YellowWhiteColor
 };
 
+static const uint8_t DEBOUNCED_STATE = 0b00000001;
+static const uint8_t UNSTABLE_STATE = 0b00000010;
+
 #ifdef USE_RCSWITCH
 class RadioReceive;
 #endif
-class RelayButton;
 class Relay : public Module
 {
 private:
-    uint8_t GPIO_PIN[MAX_GPIO_PIN - MIN_FLASH_PINS];
     uint8_t operationFlag = 0; // 0每秒
 
     char powerStatTopic[80];
-    RelayButton *btns;
+
+    // 按键
+    // 等待开关再次切换的时间（以毫秒为单位）。
+    // 300对我来说效果很好，几乎没有引起注意。 如果您不想使用此功能，请设置为0。
+    unsigned long specialFunctionTimeout = 300;
+    uint8_t buttonDebounceTime = 50;
+    unsigned long buttonTimingStart[4];
+    unsigned long buttonIntervalStart[4];
+    uint8_t buttonStateFlag[4];
+    uint8_t switchCount[4];
+    int lastTime[4];
+    void cheackButton(uint8_t ch);
 
     // PWM
-    Ticker *ledTicker;
     int ledLevel = 0;
     int ledLight = 2023;
     bool ledUp = true;
@@ -69,9 +80,11 @@ private:
 #endif
 
 public:
+    uint8_t GPIO_PIN[MAX_GPIO_PIN - MIN_FLASH_PINS];
     RelayConfigMessage config;
     uint8_t lastState = 0;
     uint8_t channels = 0;
+    Ticker ledTicker;
 
 #ifdef USE_RCSWITCH
     RadioReceive *radioReceive = NULL;
@@ -80,7 +93,7 @@ public:
     void init();
     String getModuleName() { return F("relay"); }
     String getModuleCNName();
-    String getModuleVersion() { return F("2020.02.26.2100"); }
+    String getModuleVersion() { return F("2020.02.29.2100"); }
     String getModuleAuthor() { return F("情留メ蚊子"); }
     bool moduleLed();
 

@@ -24,4 +24,5 @@ message RelayConfigMessage {
 
     uint32 module_type = 20 [(nanopb).int_size = IS_8];
     uint32 report_interval = 21 [(nanopb).int_size = IS_16];
+    uint32 led = 22 [(nanopb).int_size = IS_8];
 }

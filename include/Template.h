@@ -101,7 +101,7 @@ const mytmplt Modules[] PROGMEM = {
         GPIO_REL2,         // GPIO12
         GPIO_RFRECV,       // GPIO13
         GPIO_REL1,         // GPIO14
-        GPIO_LED3,         // GPIO15
+        GPIO_NONE,         // GPIO15
         GPIO_LED_POWER_INV // GPIO16 Led (1 = On, 0 = Off) - Link and Power status
     },
     {

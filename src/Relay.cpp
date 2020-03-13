@@ -55,7 +55,7 @@ void Relay::init()
         }
     }
 
-    strcpy(powerStatTopic, Mqtt::getStatTopic(F("POWER1")).c_str());
+    strcpy(powerStatTopic, Mqtt::getStatTopic(F("power1")).c_str());
 
     for (uint8_t ch = 0; ch < channels; ch++)
     {
@@ -172,21 +172,21 @@ void Relay::saveConfig(bool isEverySecond)
 
 void Relay::mqttCallback(String topicStr, String str)
 {
-    if (channels >= 1 && topicStr.endsWith("/POWER1"))
+    if (channels >= 1 && topicStr.endsWith("/power1"))
     {
-        switchRelay(0, (str == "ON" ? true : (str == "OFF" ? false : !bitRead(lastState, 0))));
+        switchRelay(0, (str == "on" ? true : (str == "off" ? false : !bitRead(lastState, 0))));
     }
-    else if (channels >= 2 && topicStr.endsWith("/POWER2"))
+    else if (channels >= 2 && topicStr.endsWith("/power2"))
     {
-        switchRelay(1, (str == "ON" ? true : (str == "OFF" ? false : !bitRead(lastState, 1))));
+        switchRelay(1, (str == "on" ? true : (str == "off" ? false : !bitRead(lastState, 1))));
     }
-    else if (channels >= 3 && topicStr.endsWith("/POWER3"))
+    else if (channels >= 3 && topicStr.endsWith("/power3"))
     {
-        switchRelay(2, (str == "ON" ? true : (str == "OFF" ? false : !bitRead(lastState, 2))));
+        switchRelay(2, (str == "on" ? true : (str == "off" ? false : !bitRead(lastState, 2))));
     }
-    else if (channels >= 4 && topicStr.endsWith("/POWER4"))
+    else if (channels >= 4 && topicStr.endsWith("/power4"))
     {
-        switchRelay(3, (str == "ON" ? true : (str == "OFF" ? false : !bitRead(lastState, 3))));
+        switchRelay(3, (str == "off" ? true : (str == "off" ? false : !bitRead(lastState, 3))));
     }
     else if (topicStr.endsWith("/report"))
     {
@@ -196,7 +196,7 @@ void Relay::mqttCallback(String topicStr, String str)
 
 void Relay::mqttConnected()
 {
-    strcpy(powerStatTopic, Mqtt::getStatTopic(F("POWER1")).c_str());
+    strcpy(powerStatTopic, Mqtt::getStatTopic(F("power1")).c_str());
     if (globalConfig.mqtt.discovery)
     {
         mqttDiscovery(true);
@@ -211,7 +211,7 @@ void Relay::mqttDiscovery(bool isEnable)
 
     String availability = Mqtt::getTeleTopic(F("availability"));
     char cmndTopic[80];
-    strcpy(cmndTopic, Mqtt::getCmndTopic(F("POWER1")).c_str());
+    strcpy(cmndTopic, Mqtt::getCmndTopic(F("power1")).c_str());
     for (size_t ch = 0; ch < channels; ch++)
     {
         sprintf(topic, "%s/light/%s_l%d/config", globalConfig.mqtt.discovery_prefix, UID, (ch + 1));
@@ -480,7 +480,7 @@ void Relay::httpDo(ESP8266WebServer *server)
         return;
     }
     String str = server->arg(F("do"));
-    switchRelay(ch, (str == "ON" ? true : (str == "OFF" ? false : !bitRead(lastState, ch))));
+    switchRelay(ch, (str == "on" ? true : (str == "off" ? false : !bitRead(lastState, ch))));
 
     server->send(200, F("text/html"), "{\"code\":1,\"msg\":\"操作成功\",\"data\":{" + httpGetStatus(server) + "}}");
 }
@@ -616,7 +616,7 @@ void Relay::httpHa(ESP8266WebServer *server)
 
     String availability = Mqtt::getTeleTopic(F("availability"));
     char cmndTopic[100];
-    strcpy(cmndTopic, Mqtt::getCmndTopic(F("POWER1")).c_str());
+    strcpy(cmndTopic, Mqtt::getCmndTopic(F("power1")).c_str());
     server->sendContent(F("light:\r\n"));
     for (size_t ch = 0; ch < channels; ch++)
     {
@@ -630,7 +630,7 @@ void Relay::httpHa(ESP8266WebServer *server)
         server->sendContent(powerStatTopic);
         server->sendContent(F("\"\r\n    command_topic: \""));
         server->sendContent(cmndTopic);
-        server->sendContent(F("\"\r\n    payload_on: \"ON\"\r\n    payload_off: \"OFF\"\r\n    availability_topic: \""));
+        server->sendContent(F("\"\r\n    payload_on: \"on\"\r\n    payload_off: \"off\"\r\n    availability_topic: \""));
         server->sendContent(availability);
         server->sendContent(F("\"\r\n    payload_available: \"online\"\r\n    payload_not_available: \"offline\"\r\n\r\n"));
     }
@@ -781,7 +781,7 @@ void Relay::switchRelay(uint8_t ch, bool isOn, bool isSave)
     digitalWrite(GPIO_PIN[GPIO_REL1 + ch], isOn ? HIGH : LOW);
 
     powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
-    Mqtt::publish(powerStatTopic, isOn ? "ON" : "OFF", globalConfig.mqtt.retain);
+    Mqtt::publish(powerStatTopic, isOn ? "on" : "off", globalConfig.mqtt.retain);
 
     if (isSave && config.power_on_state > 0)
     {
@@ -881,7 +881,7 @@ void Relay::reportPower()
     for (size_t ch = 0; ch < channels; ch++)
     {
         powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
-        Mqtt::publish(powerStatTopic, bitRead(lastState, ch) ? "ON" : "OFF", globalConfig.mqtt.retain);
+        Mqtt::publish(powerStatTopic, bitRead(lastState, ch) ? "on" : "off", globalConfig.mqtt.retain);
     }
 }
 

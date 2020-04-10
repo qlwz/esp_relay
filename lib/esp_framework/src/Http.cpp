@@ -10,6 +10,7 @@
 
 ESP8266WebServer *Http::server;
 bool Http::isBegin = false;
+bool Http::ismDNS = false;
 String Http::updaterError;
 
 void Http::handleRoot()
@@ -121,6 +122,7 @@ void Http::handleRoot()
     page.replace(F("{sn}"), globalConfig.wifi.sn);
     page.replace(F("{gw}"), globalConfig.wifi.gw);
 
+#ifndef DISABLE_MQTT
     page += F("<form method='post' action='/mqtt' onsubmit='postform(this);return false'>");
     page += F("<table class='gridtable'><thead><tr><th colspan='2'>MQTT设置</th></tr></thead><tbody>");
     page += F("<tr><td>地址</td><td><input type='text' name='mqtt_server' placeholder='服务器地址' value='{server}'></td></tr>");
@@ -146,6 +148,7 @@ void Http::handleRoot()
     radioJs.replace(F("{v}"), globalConfig.mqtt.retain ? F("1") : F("0"));
     page.replace(F("{mqttconnected}"), (Mqtt::mqttClient.connected() ? F("已连接") : F("未连接")));
 
+#ifndef DISABLE_MQTT_DISCOVERY
     page += F("<form method='post' action='/discovery' onsubmit='postform(this);return false'>");
     page += F("<table class='gridtable'><thead><tr><th colspan='2'>MQTT自动发现</th></tr></thead><tbody>");
     page += F("<tr><td>自发现状态</td><td id='discovery'>{discovery}</td></tr>");
@@ -156,9 +159,12 @@ void Http::handleRoot()
         radioJs += F("id('discovery_btn').setAttribute('class', 'btn-danger');id('discovery_btn').innerHTML='关闭MQTT自动发现';");
     }
     page += F("</tbody></table></form>");
-    page += F("</div>");
     page.replace(F("{discovery}"), globalConfig.mqtt.discovery ? F("已启动") : F("未启动"));
     page.replace(F("{prefix}"), globalConfig.mqtt.discovery_prefix);
+#endif
+#endif
+
+    page += F("</div>");
     // TAB 2 End
 
     // TAB 3 Start
@@ -279,6 +285,7 @@ void Http::handleRoot()
     server->sendContent(page);
 }
 
+#ifndef DISABLE_MQTT
 void Http::handleMqtt()
 {
     if (!checkAuth())
@@ -320,6 +327,33 @@ void Http::handleMqtt()
         Http::server->send(200, F("text/html"), F("{\"code\":1,\"msg\":\"设置MQTT服务器成功，未连接。\",\"data\":{\"mqttconnected\":\"未连接\"}}"));
     }
 }
+
+#ifndef DISABLE_MQTT_DISCOVERY
+void Http::handleDiscovery()
+{
+    if (!checkAuth())
+    {
+        return;
+    }
+    strcpy(globalConfig.mqtt.discovery_prefix, server->arg(F("discovery_prefix")).c_str());
+    globalConfig.mqtt.discovery = !globalConfig.mqtt.discovery;
+    Config::saveConfig();
+
+    if (module)
+    {
+        module->mqttDiscovery(globalConfig.mqtt.discovery);
+    }
+    if (globalConfig.mqtt.discovery)
+    {
+        Http::server->send(200, F("text/html"), F("{\"code\":1,\"msg\":\"已经打开MQTT自发现。\",\"data\":{\"discovery\":1}}"));
+    }
+    else
+    {
+        Http::server->send(200, F("text/html"), F("{\"code\":1,\"msg\":\"已经关闭MQTT自发现。\",\"data\":{\"discovery\":0}}"));
+    }
+}
+#endif
+#endif
 
 void Http::handledhcp()
 {
@@ -488,30 +522,6 @@ void Http::handleWifi()
     }
 }
 
-void Http::handleDiscovery()
-{
-    if (!checkAuth())
-    {
-        return;
-    }
-    strcpy(globalConfig.mqtt.discovery_prefix, server->arg(F("discovery_prefix")).c_str());
-    globalConfig.mqtt.discovery = !globalConfig.mqtt.discovery;
-    Config::saveConfig();
-
-    if (module)
-    {
-        module->mqttDiscovery(globalConfig.mqtt.discovery);
-    }
-    if (globalConfig.mqtt.discovery)
-    {
-        Http::server->send(200, F("text/html"), F("{\"code\":1,\"msg\":\"已经打开MQTT自发现。\",\"data\":{\"discovery\":1}}"));
-    }
-    else
-    {
-        Http::server->send(200, F("text/html"), F("{\"code\":1,\"msg\":\"已经关闭MQTT自发现。\",\"data\":{\"discovery\":0}}"));
-    }
-}
-
 void Http::handleRestart()
 {
     if (!checkAuth())
@@ -594,14 +604,17 @@ void Http::handleGetStatus()
     server->setContentLength(CONTENT_LENGTH_UNKNOWN);
     server->send(200, F("text/html"), "");
     String data = F("{\"code\":1,\"msg\":\"\",\"data\":{");
-    data += F("\"mqttconnected\":\"");
-    data += Mqtt::mqttClient.connected() ? F("已连接") : F("未连接");
-
-    data += F("\",\"discovery\":");
-    data += globalConfig.mqtt.discovery ? 1 : 0;
-
-    data += F(",\"uptime\":\"");
+    data += F("\"uptime\":\"");
     data += Rtc::msToHumanString(millis());
+
+#ifndef DISABLE_MQTT
+    data += F("\",\"mqttconnected\":\"");
+    data += Mqtt::mqttClient.connected() ? F("已连接") : F("未连接");
+#ifndef DISABLE_MQTT_DISCOVERY
+    data += F("\",\"discovery\":\"");
+    data += globalConfig.mqtt.discovery ? 1 : 0;
+#endif
+#endif
 
     data += F("\",\"ip\":\"");
     if (Wifi::configPortalStart == 0 && WiFi.isConnected())
@@ -787,11 +800,15 @@ void Http::begin()
     server = new ESP8266WebServer();
 
     server->on(F("/"), handleRoot);
+#ifndef DISABLE_MQTT
     server->on(F("/mqtt"), handleMqtt);
+#ifndef DISABLE_MQTT_DISCOVERY
+    server->on(F("/discovery"), handleDiscovery);
+#endif
+#endif
     server->on(F("/dhcp"), handledhcp);
     server->on(F("/scan_wifi"), handleScanWifi);
     server->on(F("/wifi"), handleWifi);
-    server->on(F("/discovery"), handleDiscovery);
     server->on(F("/restart"), handleRestart);
     server->on(F("/reset"), handleReset);
     server->on(F("/module_setting"), handleModuleSetting);
@@ -804,7 +821,6 @@ void Http::begin()
     {
         module->httpAdd(server);
     }
-    MDNS.begin(UID);
     server->begin(globalConfig.http.port);
     Debug::AddInfo(PSTR("HTTP server started port: %d"), globalConfig.http.port);
 }
@@ -824,7 +840,15 @@ void Http::loop()
     if (isBegin)
     {
         server->handleClient();
-        MDNS.update();
+        if (ismDNS){
+            MDNS.update();
+        } else if (WiFi.status() == WL_CONNECTED){
+            if  (MDNS.begin(UID)){
+            Serial1.println("MDNS started");
+            ismDNS = true;
+            }else{
+            Serial1.println("MDNS started2");}
+        }
     }
 }
 
@@ -902,10 +926,14 @@ void Http::handleModuleSetting()
     Config::saveConfig();
     if (uid.length() == 0 || strncmp(globalConfig.uid, UID, uid.length()) != 0)
     {
+#ifndef DISABLE_MQTT
+#ifndef DISABLE_MQTT_DISCOVERY
         if (globalConfig.mqtt.discovery && module)
         {
             module->mqttDiscovery(false);
         }
+#endif
+#endif
         Http::server->send(200, F("text/html"), F("{\"code\":1,\"msg\":\"修改了重要配置 . . . 正在重启中。\"}"));
         Led::blinkLED(400, 4);
         ESP.restart();

@@ -6,6 +6,7 @@
 #include "Util.h"
 
 uint16_t Framework::rebootCount = 0;
+#ifndef DISABLE_MQTT
 void Framework::callback(char *topic, byte *payload, unsigned int length)
 {
     String str;
@@ -42,6 +43,7 @@ void Framework::connectedCallback()
         module->mqttConnected();
     }
 }
+#endif
 
 void Framework::tickerPerSecondDo()
 {
@@ -58,7 +60,9 @@ void Framework::tickerPerSecondDo()
     Rtc::perSecondDo();
 
     Config::perSecondDo();
+#ifndef DISABLE_MQTT
     Mqtt::perSecondDo();
+#endif
     module->perSecondDo();
 }
 
@@ -125,9 +129,11 @@ void Framework::setup()
     }
     else
     {
+#ifndef DISABLE_MQTT
         Mqtt::setClient(Wifi::wifiClient);
         Mqtt::mqttSetConnectedCallback(connectedCallback);
         Mqtt::mqttSetLoopCallback(callback);
+#endif
         module->init();
         tickerPerSecond = new Ticker();
         tickerPerSecond->attach(1, tickerPerSecondDo);
@@ -148,8 +154,10 @@ void Framework::loop()
     {
         yield();
         Led::loop();
+#ifndef DISABLE_MQTT
         yield();
         Mqtt::loop();
+#endif
         yield();
         module->loop();
         yield();

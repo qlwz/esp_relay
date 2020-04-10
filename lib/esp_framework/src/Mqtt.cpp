@@ -1,3 +1,5 @@
+#ifndef DISABLE_MQTT
+
 #include <PubSubClient.h>
 #include "Mqtt.h"
 #include "Module.h"
@@ -208,3 +210,4 @@ String Mqtt::getTopic(uint8_t prefix, String subtopic)
         fulltopic += F("/");
     return fulltopic + subtopic;
 }
+#endif

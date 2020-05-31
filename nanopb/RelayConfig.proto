@@ -20,6 +20,7 @@ message RelayConfigMessage {
 //  uint32 downlight_default = 13 [(nanopb).int_size = IS_8];
 //  uint32 downlight_interval = 14 [(nanopb).int_size = IS_16];
 
+    uint32 switch_mode = 18 [(nanopb).int_size = IS_8];
     uint32 power_mode = 19 [(nanopb).int_size = IS_8];
 
     uint32 module_type = 20 [(nanopb).int_size = IS_8];

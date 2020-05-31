@@ -316,6 +316,14 @@ void Relay::httpHtml(ESP8266WebServer *server)
     radioJs += F("setRadioValue('power_mode', '{v}');");
     radioJs.replace(F("{v}"), String(config.power_mode));
 
+    page += F("<tr><td>开关类型</td><td>");
+    page += F("<label class='bui-radios-label'><input type='radio' name='switch_mode' value='0'/><i class='bui-radios'></i> 自动</label>&nbsp;&nbsp;&nbsp;&nbsp;");
+    page += F("<label class='bui-radios-label'><input type='radio' name='switch_mode' value='1'/><i class='bui-radios'></i> 自复位开关</label>&nbsp;&nbsp;&nbsp;&nbsp;");
+    page += F("<label class='bui-radios-label'><input type='radio' name='switch_mode' value='2'/><i class='bui-radios'></i> 传统开关</label>");
+    page += F("</td></tr>");
+    radioJs += F("setRadioValue('switch_mode', '{v}');");
+    radioJs.replace(F("{v}"), String(config.switch_mode));
+
     if (GPIO_PIN[GPIO_LED1] != 99)
     {
         page += F("<tr><td>面板指示灯</td><td>");
@@ -487,6 +495,10 @@ void Relay::httpSetting(ESP8266WebServer *server)
     if (server->hasArg(F("led")))
     {
         config.led = server->arg(F("led")).toInt();
+    }
+    if (server->hasArg(F("switch_mode")))
+    {
+        config.switch_mode = server->arg(F("switch_mode")).toInt();
     }
     if (server->hasArg(F("power_mode")))
     {
@@ -740,10 +752,24 @@ void Relay::cheackButton(uint8_t ch)
             switchCount[ch] += 1;
             buttonIntervalStart[ch] = millis();
 
-            if (millis() > lastTime[ch] + 300)
+            if (config.switch_mode == 1)
+            {
+                if (!currentState)
+                {
+                    switchRelay(ch, !bitRead(lastState, ch), true);
+                }
+            }
+            else if (config.switch_mode == 2)
             {
                 switchRelay(ch, !bitRead(lastState, ch), true);
-                lastTime[ch] = millis();
+            }
+            else
+            {
+                if (millis() > lastTime[ch] + 300)
+                {
+                    switchRelay(ch, !bitRead(lastState, ch), true);
+                    lastTime[ch] = millis();
+                }
             }
         }
     }

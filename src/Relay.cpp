@@ -248,9 +248,6 @@ void Relay::httpAdd(ESP8266WebServer *server)
 #ifdef USE_RCSWITCH
     server->on(F("/rf_do"), std::bind(&Relay::httpRadioReceive, this, server));
 #endif
-#ifdef USE_TRICOLOR
-    server->on(F("/downlight_setting"), std::bind(&Relay::httpDownlightSetting, this, server));
-#endif
 }
 
 String Relay::httpGetStatus(ESP8266WebServer *server)
@@ -380,53 +377,6 @@ void Relay::httpHtml(ESP8266WebServer *server)
     page += F("<button type='button' class='btn-success' style='margin-top:10px' onclick='window.location.href=\"/ha\"'>下载HA配置文件</button></td></tr>");
     page += F("</tbody></table></form>");
 
-#ifdef USE_TRICOLOR
-    page += F("<form method='post' action='/downlight_setting' onsubmit='postform(this);return false'>");
-    page += F("<table class='gridtable'><thead><tr><th colspan='2'>三色筒灯</th></tr></thead><tbody>");
-    page += F("<tr><td>指定路数</td><td>");
-    page += F("<label class='bui-radios-label'><input type='radio' name='downlight_ch' value='0'/><i class='bui-radios'></i> 无</label>&nbsp;&nbsp;&nbsp;&nbsp;");
-    for (size_t ch = 0; ch < channels; ch++)
-    {
-        page += F("<label class='bui-radios-label'><input type='radio' name='downlight_ch' value='{ch}'/><i class='bui-radios'></i> {ch}路</label>&nbsp;&nbsp;&nbsp;&nbsp;");
-        page.replace(F("{ch}"), String(ch + 1));
-    }
-    page += F("</td></tr>");
-    radioJs += F("setRadioValue('downlight_ch', '{v}');");
-    radioJs.replace(F("{v}"), String(config.downlight_ch));
-
-    String tmp = F("<option value='1'>白光</option><option value='2'>黄光</option><option value='3'>黄白光</option>");
-
-    page += F("<tr><td>三色排序</td><td>");
-    page += F("<select id='color1' name='color1'>");
-    page += tmp;
-    page += F("</select>&nbsp;&nbsp;");
-    page += F("<select id='color2' name='color2'>");
-    page += tmp;
-    page += F("</select>&nbsp;&nbsp;");
-    page += F("<select id='color3' name='color3'>");
-    page += tmp;
-    page += F("</select>");
-    page += F("</td></tr>");
-    radioJs += F("id('color1').value={v1};");
-    radioJs += F("id('color2').value={v2};");
-    radioJs += F("id('color3').value={v3};");
-    radioJs.replace(F("{v1}"), String(config.downlight_color[0]));
-    radioJs.replace(F("{v2}"), String(config.downlight_color[1]));
-    radioJs.replace(F("{v3}"), String(config.downlight_color[2]));
-
-    page += F("<tr><td>默认颜色</td><td>");
-    page += F("<label class='bui-radios-label'><input type='radio' name='default' value='1'/><i class='bui-radios'></i> 白光</label>&nbsp;&nbsp;&nbsp;");
-    page += F("<label class='bui-radios-label'><input type='radio' name='default' value='2'/><i class='bui-radios'></i> 黄光</label>&nbsp;&nbsp;&nbsp;");
-    page += F("<label class='bui-radios-label'><input type='radio' name='default' value='3'/><i class='bui-radios'></i> 黄白光</label>&nbsp;&nbsp;&nbsp;");
-    page += F("<label class='bui-radios-label'><input type='radio' name='default' value='4'/><i class='bui-radios'></i> 记忆</label>");
-    page += F("</td></tr>");
-    radioJs += F("setRadioValue('default', '{v1}');");
-    radioJs.replace(F("{v1}"), String(config.downlight_default));
-
-    page += F("<tr><td colspan='2'><button type='submit' class='btn-info'>设置</button></td></tr>");
-    page += F("</tbody></table></form>");
-#endif
-
 #ifdef USE_RCSWITCH
     if (radioReceive)
     {
@@ -526,28 +476,6 @@ void Relay::httpRadioReceive(ESP8266WebServer *server)
     }
     Config::saveConfig();
     server->send(200, F("text/html"), F("{\"code\":1,\"msg\":\"操作成功\"}"));
-}
-#endif
-
-#ifdef USE_TRICOLOR
-void Relay::httpDownlightSetting(ESP8266WebServer *server)
-{
-    String color1 = server->arg(F("color1"));
-    String color2 = server->arg(F("color2"));
-    String color3 = server->arg(F("color3"));
-    if (color1 == color2 || color1 == color3 || color2 == color3)
-    {
-        server->send(200, F("text/html"), F("{\"code\":0,\"msg\":\"三色排序存在相同\"}"));
-        return;
-    }
-
-    config.downlight_ch = server->arg(F("downlight_ch")).toInt();
-    config.downlight_default = server->arg(F("default")).toInt();
-    config.downlight_color[0] = color1.toInt();
-    config.downlight_color[1] = color2.toInt();
-    config.downlight_color[2] = color3.toInt();
-    Config::saveConfig();
-    server->send(200, F("text/html"), F("{\"code\":1,\"msg\":\"已经设置成功。\"}"));
 }
 #endif
 
@@ -773,10 +701,6 @@ void Relay::switchRelay(uint8_t ch, bool isOn, bool isSave)
         }
     }
 
-#ifdef USE_TRICOLOR
-    colorOnOff(ch, isOn);
-#endif
-
     bitWrite(lastState, ch, isOn);
     digitalWrite(GPIO_PIN[GPIO_REL1 + ch], isOn ? HIGH : LOW);
 
@@ -884,46 +808,3 @@ void Relay::reportPower()
         Mqtt::publish(powerStatTopic, bitRead(lastState, ch) ? "on" : "off", globalConfig.mqtt.retain);
     }
 }
-
-#ifdef USE_TRICOLOR
-void Relay::colorOnOff(uint8_t ch, bool isOn)
-{
-    if (config.downlight_ch == ch + 1 && bitRead(lastState, ch) != isOn) // 三色筒灯
-    {
-        if (!isOn)
-        {
-            colorOffTime = millis();
-            return;
-        }
-
-        if (millis() > colorOffTime + (2 * 1000)) // 关灯超过5秒
-        {
-            if (config.downlight_default == 0)
-            {
-                config.downlight_index = 0;
-            }
-            else
-            {
-                uint8_t def = config.downlight_default == 4 ? config.downlight_color[config.downlight_index] : config.downlight_default;
-                for (size_t i = 0; i < 3; i++)
-                {
-                    if (def == config.downlight_color[i])
-                    {
-                        config.downlight_index = i;
-                        break;
-                    }
-                    digitalWrite(GPIO_PIN[GPIO_REL1 + ch], HIGH);
-                    delay(105);
-                    digitalWrite(GPIO_PIN[GPIO_REL1 + ch], LOW);
-                    delay(105);
-                }
-            }
-        }
-        else
-        {
-            config.downlight_index = (config.downlight_index + 1) % 3;
-        }
-        Debug::AddInfo(PSTR("cur color: %d"), config.downlight_index);
-    }
-}
-#endif

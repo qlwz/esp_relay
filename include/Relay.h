@@ -20,14 +20,6 @@ const char HASS_DISCOVER_RELAY[] PROGMEM =
     "\"pl_avail\":\"online\","
     "\"pl_not_avail\":\"offline\"}";
 
-enum LightColor
-{
-    None,
-    WhiteColor,
-    YellowColor,
-    YellowWhiteColor
-};
-
 static const uint8_t DEBOUNCED_STATE = 0b00000001;
 static const uint8_t UNSTABLE_STATE = 0b00000010;
 
@@ -72,12 +64,6 @@ private:
 
     void loadModule(uint8_t module);
     void reportPower();
-
-#ifdef USE_TRICOLOR
-    void httpDownlightSetting(ESP8266WebServer *server);
-    unsigned long colorOffTime = 0;
-    void colorOnOff(uint8_t ch, bool isOn);
-#endif
 
 public:
     uint8_t GPIO_PIN[MAX_GPIO_PIN - MIN_FLASH_PINS];

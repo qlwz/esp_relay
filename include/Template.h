@@ -8,7 +8,7 @@
 
 typedef struct MYTMPLT
 {
-    char name[15];
+    char name[16];
     uint8_t io[MAX_GPIO_PIN - MIN_FLASH_PINS];
 } mytmplt;
 
@@ -30,6 +30,9 @@ enum UserSelectablePins
     GPIO_LED3,
     GPIO_LED4,
     GPIO_RFRECV, // RF receiver
+
+
+    GPIO_MAX  // 占位
 };
 
 enum SupportedModules
@@ -40,10 +43,11 @@ enum SupportedModules
     CH3,
     iciness_CH3,
 
-    END // 占位
+
+    MAXMODULE // 占位
 };
 
-const mytmplt Modules[] PROGMEM = {
+const mytmplt Modules[MAXMODULE] PROGMEM = {
     {
         "Sonoff Basic",     // Sonoff Basic (ESP8266)
         GPIO_KEY1,          // GPIO00 Button

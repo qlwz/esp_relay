@@ -66,7 +66,7 @@ private:
     void reportPower();
 
 public:
-    uint8_t GPIO_PIN[MAX_GPIO_PIN - MIN_FLASH_PINS];
+    uint8_t GPIO_PIN[GPIO_MAX];
     RelayConfigMessage config;
     uint8_t lastState = 0;
     uint8_t channels = 0;

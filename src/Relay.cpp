@@ -11,16 +11,6 @@ String Relay::getModuleCNName()
 
 void Relay::init()
 {
-    if (config.led_light == 0)
-    {
-        config.led_light = 100;
-    }
-    if (config.led_time == 0)
-    {
-        config.led_time = 2;
-    }
-    ledLight = config.led_light * 10 + 23;
-
     loadModule(config.module_type);
     if (GPIO_PIN[GPIO_LED_POWER] != 99)
     {
@@ -151,13 +141,27 @@ void Relay::perSecondDo()
 void Relay::readConfig()
 {
     Config::moduleReadConfig(MODULE_CFG_VERSION, sizeof(RelayConfigMessage), RelayConfigMessage_fields, &config);
+    if (config.led_light == 0)
+    {
+        config.led_light = 100;
+    }
+    if (config.led_time == 0)
+    {
+        config.led_time = 2;
+    }
+    ledLight = config.led_light * 10 + 23;
+
+    if (config.module_type >= MAXMODULE)
+    {
+        config.module_type = SONOFF_BASIC;
+    }
 }
 
 void Relay::resetConfig()
 {
     Debug::AddInfo(PSTR("moduleResetConfig . . . OK"));
     memset(&config, 0, sizeof(RelayConfigMessage));
-    config.module_type = SupportedModules::CH3;
+    config.module_type = SupportedModules::SONOFF_BASIC;
     config.led_light = 50;
     config.led_time = 3;
 }
@@ -284,16 +288,18 @@ void Relay::httpHtml(ESP8266WebServer *server)
 
     page += F("<form method='post' action='/relay_setting' onsubmit='postform(this);return false'>");
     page += F("<table class='gridtable'><thead><tr><th colspan='2'>开关设置</th></tr></thead><tbody>");
-    if (SupportedModules::END > 1)
+    if (SupportedModules::MAXMODULE > 1)
     {
         page += F("<tr><td>模块类型</td><td>");
         page += F("<select id='module_type' name='module_type' style='width:150px'>");
-        for (int count = 0; count < SupportedModules::END; count++)
+        char stemp[17];
+        for (int count = 0; count < SupportedModules::MAXMODULE; count++)
         {
             page += F("<option value='");
             page += String(count);
             page += F("'>");
-            page += Modules[count].name;
+            snprintf_P(stemp, sizeof(stemp), Modules[count].name);
+            page += String(stemp);
             page += F("</option>");
         }
         page += F("</select></td></tr>");
@@ -804,12 +810,14 @@ void Relay::cheackButton(uint8_t ch)
 
 void Relay::loadModule(uint8_t module)
 {
-    for (uint16_t i = 0; i < sizeof(GPIO_PIN); i++)
+    for (uint16_t i = 0; i < GPIO_MAX; i++)
     {
         GPIO_PIN[i] = 99;
     }
 
-    mytmplt m = Modules[module];
+    mytmplt m;
+    memcpy_P(&m, &Modules[module], sizeof(m));
+
     uint8_t j = 0;
     for (uint8_t i = 0; i < sizeof(m.io); i++)
     {

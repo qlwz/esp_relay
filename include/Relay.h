@@ -7,8 +7,8 @@
 #include "Template.h"
 
 #define MODULE_CFG_VERSION 1001 //1001 - 1500
-
 #define MAX_STUDY_RECEIVER_NUM 10 // 遥控最大学习数
+#define RELAY_REPORT_INTERVAL 1 // 开关主动上报间隔
 
 const char HASS_DISCOVER_RELAY[] PROGMEM =
     "{\"name\":\"%s_%d\","
@@ -67,6 +67,7 @@ private:
 
 public:
     uint8_t GPIO_PIN[GPIO_MAX];
+    //自定义 备注：开关参数变量实例
     RelayConfigMessage config;
     uint8_t lastState = 0;
     uint8_t channels = 0;

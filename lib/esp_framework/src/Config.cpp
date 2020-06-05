@@ -55,6 +55,12 @@ void Config::resetConfig()
 #ifdef MQTT_PASS
     strcpy(globalConfig.mqtt.pass, MQTT_PASS);
 #endif
+#ifdef MQTT_INTERVAL
+    globalConfig.mqtt.interval = MQTT_INTERVAL;
+#endif
+#ifdef MQTT_RETAIN
+    globalConfig.mqtt.retain = MQTT_RETAIN;
+#endif
     globalConfig.mqtt.discovery = false;
     strcpy(globalConfig.mqtt.discovery_prefix, "homeassistant");
 

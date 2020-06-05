@@ -16,13 +16,15 @@
 
 #define GLOBAL_CFG_VERSION 1 // 1 - 999
 
-//#define WIFI_SSID "qlwz"     // WiFi ssid
-//#define WIFI_PASS "" // WiFi 密码
+#define WIFI_SSID ""     // WiFi ssid
+#define WIFI_PASS "" // WiFi 密码
 
-//#define MQTT_SERVER "10.0.0.25"   // MQTTַ 地址
-//#define MQTT_PORT 1883            // MQTT 端口
-//#define MQTT_USER "mqtt"          // MQTT 用户名
-//#define MQTT_PASS "" // MQTT 密码
+#define MQTT_SERVER ""   // MQTTַ 地址
+#define MQTT_PORT 1883            // MQTT 端口
+#define MQTT_USER ""          // MQTT 用户名
+#define MQTT_PASS "" // MQTT 密码
+#define MQTT_INTERVAL 1 // MQTT 心跳上报间隔
+#define MQTT_RETAIN 1 // MQTT retain
 
 #define MQTT_FULLTOPIC "%module%/%hostname%/%prefix%/" // MQTT 主题格式
 

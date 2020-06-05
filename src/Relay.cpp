@@ -4,6 +4,7 @@
 
 #pragma region 继承
 
+
 String Relay::getModuleCNName()
 {
     return String(channels) + F("路开关模块");
@@ -162,6 +163,10 @@ void Relay::resetConfig()
     Debug::AddInfo(PSTR("moduleResetConfig . . . OK"));
     memset(&config, 0, sizeof(RelayConfigMessage));
     config.module_type = SupportedModules::SONOFF_BASIC;
+    // 自定义 开关主动上报间隔
+    #ifdef RELAY_REPORT_INTERVAL
+        config.report_interval = RELAY_REPORT_INTERVAL;
+    #endif
     config.led_light = 50;
     config.led_time = 3;
 }

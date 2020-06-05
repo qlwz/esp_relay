@@ -9,29 +9,13 @@
 #include <pb.h>
 #include "Arduino.h"
 #include "GlobalConfig.pb.h"
+#include "../../../customize.ini"
 
 #if PB_PROTO_HEADER_VERSION != 30
 #error Regenerate this file with the current version of nanopb generator.
 #endif
 
-#define GLOBAL_CFG_VERSION 1 // 1 - 999
 
-#define WIFI_SSID ""     // WiFi ssid
-#define WIFI_PASS "" // WiFi 密码
-
-#define MQTT_SERVER ""   // MQTTַ 地址
-#define MQTT_PORT 1883            // MQTT 端口
-#define MQTT_USER ""          // MQTT 用户名
-#define MQTT_PASS "" // MQTT 密码
-#define MQTT_INTERVAL 1 // MQTT 心跳上报间隔
-#define MQTT_RETAIN 1 // MQTT retain
-
-#define MQTT_FULLTOPIC "%module%/%hostname%/%prefix%/" // MQTT 主题格式
-
-#define OTA_URL "http://10.0.0.50/esp/%module%.bin"
-
-#define WEB_LOG_SIZE 4000  // Max number of characters in weblog
-#define BOOT_LOOP_OFFSET 5 // 开始恢复默认值之前的引导循环数 (0 = disable, 1..200 = 循环次数)
 
 extern char UID[16];
 extern char tmpData[512];

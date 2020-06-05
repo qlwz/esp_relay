@@ -91,13 +91,15 @@ void Http::handleRoot()
     // TAB 2 Start
     page = F("<div id='tab2'>");
     page += F("<form method='post' action='/wifi' onsubmit='postform(this);return false'>");
-    page += F("<table class='gridtable'><thead><tr><th>WiFi名称</th><th>信号</th></tr></thead><tbody>");
-    page += F("<tr id='clusss'><td>WiFi名称</td><td><input type='text' id='wifi_ssid' name='wifi_ssid' placeholder='WiFi名称'></td></tr>");
-    page += F("<tr><td>WiFi密码</td><td><input type='text' name='wifi_password' placeholder='WiFi密码'></td></tr>");
+    page += F("<table class='gridtable'><thead><tr><th colspan='2'>WIFI基本设置</th></tr></thead><tbody>");
+    page += F("<tr id='clusss'><td>WiFi名称</td><td><input type='text' id='wifi_ssid' name='wifi_ssid' placeholder='WiFi名称' value='{w_ssid}'></td></tr>");
+    page += F("<tr><td>WiFi密码</td><td><input type='text' name='wifi_password' placeholder='WiFi密码' value='{w_pass}'></td></tr>");
     page += F("<tr><td colspan='2'><button type='submit' class='btn-info'>连接WiFi</button></td></tr>");
     page += F("<tr><td colspan='2'><button type='button' class='btn-danger' onclick='scanWifi()'>搜索WiFi</button></td></tr>");
     page += F("</tbody></table></form>");
     page += F("<script type='text/javascript'>function clickwifi(t){id('wifi_ssid').value=t.value}function scanWifi(){ajaxPost('scan_wifi','',function(data){if(data.code==1){if(data.data.list.length==0){scanWifi();return;}var trs=document.getElementsByClassName('addwifi');for(var i=trs.length-1;i>=0;i--){trs[i].remove()}for(var a in data.data.list){var w=data.data.list[a];var tr=document.createElement(\"tr\");var td=document.createElement(\"td\");tr.setAttribute('class','addwifi');td.innerHTML=\"<label class='bui-radios-label'><input type='radio' name='wifi' onclick='clickwifi(this)' value='\"+w.name+\"'/><i class='bui-radios'></i> \"+w.name+(w.type==7?' [开放]':'')+\"</label>\";tr.appendChild(td);td=document.createElement(\"td\");td.innerHTML=w.rssi+'dBm '+w.quality+'%';tr.appendChild(td);var oldEle=id('clusss');oldEle.parentNode.insertBefore(tr,oldEle)}}else{toast(data.msg,data.code?3000:5000,data.code)}})}</script>");
+    page.replace(F("{w_ssid}"), globalConfig.wifi.ssid);
+    page.replace(F("{w_pass}"), globalConfig.wifi.pass);
     if (!WiFi.isConnected())
     {
         radioJs += "scanWifi();";

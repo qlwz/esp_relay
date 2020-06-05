@@ -49,27 +49,7 @@ enum SupportedModules
 
 const mytmplt Modules[MAXMODULE] PROGMEM = {
     {
-        "Sonoff Basic",     // Sonoff Basic (ESP8266)
-        GPIO_KEY1,          // GPIO00 Button
-        GPIO_NONE,          // GPIO01
-        GPIO_NONE,          // GPIO02
-        GPIO_NONE,          // GPIO03
-        GPIO_NONE,          // GPIO04
-        0,                  // GPIO05
-                            // GPIO06 (SD_CLK   Flash)
-                            // GPIO07 (SD_DATA0 Flash QIO/DIO/DOUT)
-                            // GPIO08 (SD_DATA1 Flash QIO/DIO/DOUT)
-        0,                  // GPIO09 (SD_DATA2 Flash QIO or ESP8285)
-        0,                  // GPIO10 (SD_DATA3 Flash QIO or ESP8285)
-                            // GPIO11 (SD_CMD   Flash)
-        GPIO_REL1,          // GPIO12 Red Led and Relay (0 = Off, 1 = On)
-        GPIO_LED_POWER_INV, // GPIO13 Green Led (0 = On, 1 = Off) - Link and Power status
-        GPIO_NONE,          // GPIO14
-        0,                  // GPIO15
-        0                   // GPIO16
-    },
-    {
-        "1 Channel",       // 3 Channel (ESP8285)
+        "单开",       // 3 Channel (ESP8285)
         GPIO_LED1,         // GPIO00
         GPIO_NONE,         // GPIO01
         GPIO_NONE,         // GPIO02
@@ -89,7 +69,7 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
         GPIO_LED_POWER_INV // GPIO16 Led (1 = On, 0 = Off) - Link and Power status
     },
     {
-        "2 Channel",       // 3 Channel (ESP8285)
+        "双开",       // 3 Channel (ESP8285)
         GPIO_LED1,         // GPIO00
         GPIO_NONE,         // GPIO01
         GPIO_LED2,         // GPIO02
@@ -109,7 +89,7 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
         GPIO_LED_POWER_INV // GPIO16 Led (1 = On, 0 = Off) - Link and Power status
     },
     {
-        "3 Channel",       // 3 Channel (ESP8285)
+        "三开",       // 3 Channel (ESP8285)
         GPIO_LED1,         // GPIO00
         GPIO_NONE,         // GPIO01
         GPIO_LED2,         // GPIO02
@@ -127,6 +107,26 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
         GPIO_REL1,         // GPIO14
         GPIO_LED3,         // GPIO15
         GPIO_LED_POWER_INV // GPIO16 Led (1 = On, 0 = Off) - Link and Power status
+    },
+    {
+        "Sonoff Basic",     // Sonoff Basic (ESP8266)
+        GPIO_KEY1,          // GPIO00 Button
+        GPIO_NONE,          // GPIO01
+        GPIO_NONE,          // GPIO02
+        GPIO_NONE,          // GPIO03
+        GPIO_NONE,          // GPIO04
+        0,                  // GPIO05
+                            // GPIO06 (SD_CLK   Flash)
+                            // GPIO07 (SD_DATA0 Flash QIO/DIO/DOUT)
+                            // GPIO08 (SD_DATA1 Flash QIO/DIO/DOUT)
+        0,                  // GPIO09 (SD_DATA2 Flash QIO or ESP8285)
+        0,                  // GPIO10 (SD_DATA3 Flash QIO or ESP8285)
+                            // GPIO11 (SD_CMD   Flash)
+        GPIO_REL1,          // GPIO12 Red Led and Relay (0 = Off, 1 = On)
+        GPIO_LED_POWER_INV, // GPIO13 Green Led (0 = On, 1 = Off) - Link and Power status
+        GPIO_NONE,          // GPIO14
+        0,                  // GPIO15
+        0                   // GPIO16
     },
     {
         "iciness CH3", // 3 Channel (ESP8285)

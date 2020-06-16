@@ -15,7 +15,7 @@ void Led::init(uint8_t _io, uint8_t _light)
     light = _light;
     pinMode(io, OUTPUT);
 
-    Led::ledType = 0;
+    Led::ledType = 99;
     ledTicker = new Ticker();
     ledTicker2 = new Ticker();
 

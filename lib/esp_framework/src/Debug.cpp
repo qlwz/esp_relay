@@ -8,7 +8,9 @@
 uint8_t Debug::webLogIndex = 1;
 char Debug::webLog[WEB_LOG_SIZE] = {'\0'};
 #endif
+#ifdef USE_SYSLOG
 IPAddress Debug::ip;
+#endif
 
 WiFiUDP Udp;
 size_t Debug::strchrspn(const char *str1, int character)
@@ -50,6 +52,7 @@ void Debug::GetLog(uint8_t idx, char **entry_pp, uint16_t *len_p)
 }
 #endif
 
+#ifdef USE_SYSLOG
 void Debug::Syslog()
 {
     if ((2 & globalConfig.debug.type) != 2 || WiFi.status() != WL_CONNECTED || globalConfig.debug.server[0] == '\0' || globalConfig.debug.port == 0)
@@ -74,6 +77,7 @@ void Debug::Syslog()
         delay(1); // Add time for UDP handling (#5512)
     }
 }
+#endif
 
 void Debug::AddLog(uint8_t loglevel)
 {
@@ -113,7 +117,9 @@ void Debug::AddLog(uint8_t loglevel)
     }
 #endif
 
+#ifdef USE_SYSLOG
     Syslog();
+#endif
 }
 
 void Debug::AddLog(uint8_t loglevel, PGM_P formatP, ...)

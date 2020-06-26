@@ -181,12 +181,15 @@ void Http::handleRoot()
         PSTR("<tr><td>日志输出</td><td>"
              "<label class='bui-radios-label'><input type='checkbox' name='log_serial' value='1'/><i class='bui-radios' style='border-radius:20%'></i> Serial</label>&nbsp;&nbsp;&nbsp;&nbsp;"
              "<label class='bui-radios-label'><input type='checkbox' name='log_serial1' value='1'/><i class='bui-radios' style='border-radius:20%'></i> Serial1</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+#ifdef USE_SYSLOG
              "<label class='bui-radios-label'><input type='checkbox' name='log_syslog' value='1'/><i class='bui-radios' style='border-radius:20%'></i> syslog</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+#endif
 #ifdef WEB_LOG_SIZE
              "<label class='bui-radios-label'><input type='checkbox' name='log_web' value='1'/><i class='bui-radios' style='border-radius:20%'></i> web</label>&nbsp;&nbsp;&nbsp;&nbsp;"
 #endif
              "</td></tr>"));
 
+#ifdef USE_SYSLOG
     snprintf_P(tmpData, sizeof(tmpData),
                PSTR("<tr><td>syslog服务器</td><td>"
                     "<input type='text' name='log_syslog_host' style='width:150px' value='%s'> : "
@@ -194,6 +197,7 @@ void Http::handleRoot()
                     "</td></tr>"),
                globalConfig.debug.server, globalConfig.debug.port);
     server->sendContent_P(tmpData);
+#endif
 
     snprintf_P(tmpData, sizeof(tmpData),
                PSTR("<tr><td>NTP服务器</td><td>"
@@ -290,10 +294,12 @@ void Http::handleRoot()
     {
         server->sendContent_P(PSTR("setRadioValue('log_serial', '1');"));
     }
+#ifdef USE_SYSLOG
     if ((2 & globalConfig.debug.type) == 2)
     {
         server->sendContent_P(PSTR("setRadioValue('log_syslog', '1');"));
     }
+#endif
 #ifdef WEB_LOG_SIZE
     if ((4 & globalConfig.debug.type) == 4)
     {
@@ -905,7 +911,14 @@ void Http::handleModuleSetting()
     {
         return;
     }
-    if (server->hasArg(F("log_serial")) || server->hasArg(F("log_serial1")) || server->hasArg(F("log_syslog")) || server->hasArg(F("log_web")))
+    if (server->hasArg(F("log_serial")) || server->hasArg(F("log_serial1"))
+#ifdef USE_SYSLOG
+        || server->hasArg(F("log_syslog"))
+#endif
+#ifdef WEB_LOG_SIZE
+        || server->hasArg(F("log_web"))
+#endif
+    )
     {
         int t = 0;
         if (server->arg(F("log_serial")).equals(F("1")))
@@ -916,11 +929,14 @@ void Http::handleModuleSetting()
         {
             t = t | 8;
         }
+#ifdef WEB_LOG_SIZE
         if (server->arg(F("log_web")).equals(F("1")))
         {
             t = t | 4;
         }
+#endif
 
+#ifdef USE_SYSLOG
         String log_syslog = server->arg(F("log_syslog"));
         if (log_syslog.equals(F("1")))
         {
@@ -936,6 +952,7 @@ void Http::handleModuleSetting()
             globalConfig.debug.port = log_syslog_port.toInt();
             WiFi.hostByName(globalConfig.debug.server, Debug::ip);
         }
+#endif
 
         if (server->arg(F("log_serial1")).equals(F("1")))
         {

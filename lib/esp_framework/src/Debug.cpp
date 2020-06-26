@@ -78,11 +78,11 @@ void Debug::AddLog(uint8_t loglevel)
 
     if ((1 & globalConfig.debug.type) == 1)
     {
-        Serial.printf("%s%s\r\n", mxtime, tmpData);
+        Serial.printf(PSTR("%s%s\r\n"), mxtime, tmpData);
     }
     if ((8 & globalConfig.debug.type) == 8)
     {
-        Serial1.printf("%s%s\r\n", mxtime, tmpData);
+        Serial1.printf(PSTR("%s%s\r\n"), mxtime, tmpData);
     }
 
     //if (Settings.webserver && (loglevel <= Settings.weblog_level))

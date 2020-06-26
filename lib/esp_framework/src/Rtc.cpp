@@ -71,7 +71,7 @@ String Rtc::timeSince(uint32_t const start)
         diff = now - start;
     else
         diff = UINT32_MAX - start + now;
-    return msToHumanString(diff) + " ago";
+    return msToHumanString(diff) + F(" ago");
 }
 
 void Rtc::breakTime(uint32_t time_input, TIME_T &tm)

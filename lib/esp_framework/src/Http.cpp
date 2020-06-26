@@ -42,7 +42,9 @@ void Http::handleRoot()
              "<button onclick='tab(2)'>联网</button>"
              "<button onclick='tab(3)'>控制</button>"
              "<button onclick='tab(4)'>关于</button>"
+#ifdef WEB_LOG_SIZE
              "<button onclick='tab(5)'>日志</button>"
+#endif
              "</div>"));
 
     // TAB 1 Start
@@ -180,7 +182,9 @@ void Http::handleRoot()
              "<label class='bui-radios-label'><input type='checkbox' name='log_serial' value='1'/><i class='bui-radios' style='border-radius:20%'></i> Serial</label>&nbsp;&nbsp;&nbsp;&nbsp;"
              "<label class='bui-radios-label'><input type='checkbox' name='log_serial1' value='1'/><i class='bui-radios' style='border-radius:20%'></i> Serial1</label>&nbsp;&nbsp;&nbsp;&nbsp;"
              "<label class='bui-radios-label'><input type='checkbox' name='log_syslog' value='1'/><i class='bui-radios' style='border-radius:20%'></i> syslog</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+#ifdef WEB_LOG_SIZE
              "<label class='bui-radios-label'><input type='checkbox' name='log_web' value='1'/><i class='bui-radios' style='border-radius:20%'></i> web</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+#endif
              "</td></tr>"));
 
     snprintf_P(tmpData, sizeof(tmpData),
@@ -201,7 +205,6 @@ void Http::handleRoot()
     server->sendContent_P(
         PSTR("<tr><td colspan='2'><button type='submit' class='btn-info'>设置</button></td></tr>"
              "</tbody></table></form>"
-
              "<div>"
              "<button type='button' class='btn-danger' style='margin-top: 10px' onclick=\"javascript:if(confirm('确定要重启模块？')){ajaxPost('/restart');}\">重启模块</button>"
              "<button type='button' class='btn-danger' style='margin-top: 10px' onclick=\"javascript:if(confirm('确定要重置模块？')){ajaxPost('/reset');}\">重置模块</button>"
@@ -253,14 +256,15 @@ void Http::handleRoot()
              "</div>"));
     // TAB 4 End
 
+#ifdef WEB_LOG_SIZE
     // TAB 5 Start
-
     server->sendContent_P(
         PSTR("<div id='tab5'>"
              "<div style='display:inline-block;color:#000000;min-width:340px;position:absolute;left:1%;margin-top:20px;width:99%'>"
              "<textarea readonly id='log' cols='340' wrap='off' style='resize:none;width:98%;height:600px;padding:5px;overflow:auto;background:#ffffff;color:#000000;'></textarea>"
              "</div></div>"));
-    // TAB 5 End
+// TAB 5 End
+#endif
 
     server->sendContent_P(
         PSTR("</div><div style='text-align:center;margin-top:20px'>开发者：<a href='https://github.com/qlwz' target='_blank' style='color:#333;text-decoration:none'>情留メ蚊子</a>&nbsp;&nbsp;&nbsp;<a href='https://bbs.iobroker.cn' target='_blank' style='color:#333;text-decoration:none'>来和大神一起玩智能家居</a></div><div></body></html>"));
@@ -290,10 +294,12 @@ void Http::handleRoot()
     {
         server->sendContent_P(PSTR("setRadioValue('log_syslog', '1');"));
     }
+#ifdef WEB_LOG_SIZE
     if ((4 & globalConfig.debug.type) == 4)
     {
         server->sendContent_P(PSTR("setRadioValue('log_web', '1');"));
     }
+#endif
     if ((8 & globalConfig.debug.type) == 8)
     {
         server->sendContent_P(PSTR("setRadioValue('log_serial1', '1');"));
@@ -654,6 +660,7 @@ void Http::handleGetStatus()
         }
     }
 
+#ifdef WEB_LOG_SIZE
     bool cflg = true;
     uint8_t counter = 0;
     if (server->hasArg(F("i")))
@@ -732,8 +739,10 @@ void Http::handleGetStatus()
             } // Skip log index 0 as it is not allowed
         } while (counter != Debug::webLogIndex);
     }
-
     server->sendContent_P(PSTR("\"}}"));
+#else
+    server->sendContent_P(PSTR("}}"));
+#endif
 }
 
 void Http::handleUpdate()

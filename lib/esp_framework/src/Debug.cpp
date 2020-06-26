@@ -4,8 +4,10 @@
 #include "Debug.h"
 #include "Rtc.h"
 
+#ifdef WEB_LOG_SIZE
 uint8_t Debug::webLogIndex = 1;
 char Debug::webLog[WEB_LOG_SIZE] = {'\0'};
+#endif
 IPAddress Debug::ip;
 
 WiFiUDP Udp;
@@ -19,6 +21,7 @@ size_t Debug::strchrspn(const char *str1, int character)
     return ret;
 }
 
+#ifdef WEB_LOG_SIZE
 void Debug::GetLog(uint8_t idx, char **entry_pp, uint16_t *len_p)
 {
     char *entry_p = NULL;
@@ -45,6 +48,7 @@ void Debug::GetLog(uint8_t idx, char **entry_pp, uint16_t *len_p)
     *entry_pp = entry_p;
     *len_p = len;
 }
+#endif
 
 void Debug::Syslog()
 {
@@ -85,6 +89,7 @@ void Debug::AddLog(uint8_t loglevel)
         Serial1.printf(PSTR("%s%s\r\n"), mxtime, tmpData);
     }
 
+#ifdef WEB_LOG_SIZE
     //if (Settings.webserver && (loglevel <= Settings.weblog_level))
     //{
     // Delimited, zero-terminated buffer of log lines.
@@ -106,6 +111,7 @@ void Debug::AddLog(uint8_t loglevel)
         if (!webLogIndex)
             webLogIndex++; // Index 0 is not allowed as it is the end of char string
     }
+#endif
 
     Syslog();
 }

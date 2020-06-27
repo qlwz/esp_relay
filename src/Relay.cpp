@@ -218,7 +218,7 @@ void Relay::mqttDiscovery(bool isEnable)
     strcpy(cmndTopic, Mqtt::getCmndTopic(F("power1")).c_str());
     for (size_t ch = 0; ch < channels; ch++)
     {
-        sprintf(topic, "%s/light/%s_l%d/config", globalConfig.mqtt.discovery_prefix, UID, (ch + 1));
+        sprintf(topic, PSTR("%s/light/%s_l%d/config"), globalConfig.mqtt.discovery_prefix, UID, (ch + 1));
         if (isEnable)
         {
             cmndTopic[strlen(cmndTopic) - 1] = ch + 49;           // 48 + 1 + ch
@@ -267,86 +267,78 @@ String Relay::httpGetStatus(ESP8266WebServer *server)
 
 void Relay::httpHtml(ESP8266WebServer *server)
 {
-    String radioJs = F("<script type='text/javascript'>");
-    radioJs += F("function setDataSub(data,key){if(key.substr(0,5)=='relay'){var t=id(key);var v=data[key];t.setAttribute('class',v==1?'btn-success':'btn-info');t.innerHTML=v==1?'开':'关';return true}return false}");
-    String page = F("<table class='gridtable'><thead><tr><th colspan='2'>开关状态</th></tr></thead><tbody>");
-    page += F("<tr colspan='2' style='text-align:center'><td>");
+    server->sendContent_P(
+        PSTR("<table class='gridtable'><thead><tr><th colspan='2'>开关状态</th></tr></thead><tbody>"
+             "<tr style='text-align:center'><td colspan='2'>"));
+
     for (size_t ch = 0; ch < channels; ch++)
     {
-        page += F(" <button type='button' style='width:50px' onclick=\"ajaxPost('/relay_do', 'do=T&c={ch}');\" id='relay_{ch}' ");
-        page.replace(F("{ch}"), String(ch + 1));
-        if (bitRead(lastState, ch))
-        {
-            page += F("class='btn-success'>开</button>");
-        }
-        else
-        {
-            page += F("class='btn-info'>关</button>");
-        }
+        snprintf_P(tmpData, sizeof(tmpData),
+                   PSTR(" <button type='button' style='width:50px' onclick=\"ajaxPost('/relay_do', 'do=T&c=%d');\" id='relay_%d' class='btn-%s'>%s</button>"),
+                   ch + 1, ch + 1,
+                   bitRead(lastState, ch) ? PSTR("success") : PSTR("info"),
+                   bitRead(lastState, ch) ? PSTR("开") : PSTR("关"));
+        server->sendContent_P(tmpData);
     }
-    page += F("</td></tr></tbody></table>");
 
-    page += F("<form method='post' action='/relay_setting' onsubmit='postform(this);return false'>");
-    page += F("<table class='gridtable'><thead><tr><th colspan='2'>开关设置</th></tr></thead><tbody>");
+    server->sendContent_P(
+        PSTR("</td></tr></tbody></table>"
+             "<form method='post' action='/relay_setting' onsubmit='postform(this);return false'>"
+             "<table class='gridtable'><thead><tr><th colspan='2'>开关设置</th></tr></thead><tbody>"));
+
     if (SupportedModules::MAXMODULE > 1)
     {
-        page += F("<tr><td>模块类型</td><td>");
-        page += F("<select id='module_type' name='module_type' style='width:150px'>");
-        char stemp[17];
+        server->sendContent_P(
+            PSTR("<tr><td>模块类型</td><td>"
+                 "<select id='module_type' name='module_type' style='width:150px'>"));
         for (int count = 0; count < SupportedModules::MAXMODULE; count++)
         {
-            page += F("<option value='");
-            page += String(count);
-            page += F("'>");
-            snprintf_P(stemp, sizeof(stemp), Modules[count].name);
-            page += String(stemp);
-            page += F("</option>");
+            snprintf_P(tmpData, sizeof(tmpData), PSTR("<option value='%d'>%s</option>"), count, Modules[count].name);
+            server->sendContent_P(tmpData);
         }
-        page += F("</select></td></tr>");
-        radioJs += F("id('module_type').value={v};");
-        radioJs.replace(F("{v}"), String(config.module_type));
+
+        server->sendContent_P(PSTR("</select></td></tr>"));
     }
-    page += F("<tr><td>上电状态</td><td>");
-    page += F("<label class='bui-radios-label'><input type='radio' name='power_on_state' value='0'/><i class='bui-radios'></i> 开关通电时断开</label><br/>");
-    page += F("<label class='bui-radios-label'><input type='radio' name='power_on_state' value='1'/><i class='bui-radios'></i> 开关通电时闭合</label><br/>");
-    page += F("<label class='bui-radios-label'><input type='radio' name='power_on_state' value='2'/><i class='bui-radios'></i> 开关通电时状态与断电前相反</label><br/>");
-    page += F("<label class='bui-radios-label'><input type='radio' name='power_on_state' value='3'/><i class='bui-radios'></i> 开关通电时保持断电前状态</label>");
-    page += F("</td></tr>");
-    radioJs += F("setRadioValue('power_on_state', '{v}');");
-    radioJs.replace(F("{v}"), String(config.power_on_state));
+    server->sendContent_P(
+        PSTR("<tr><td>上电状态</td><td>"
+             "<label class='bui-radios-label'><input type='radio' name='power_on_state' value='0'/><i class='bui-radios'></i> 开关通电时断开</label><br/>"
+             "<label class='bui-radios-label'><input type='radio' name='power_on_state' value='1'/><i class='bui-radios'></i> 开关通电时闭合</label><br/>"
+             "<label class='bui-radios-label'><input type='radio' name='power_on_state' value='2'/><i class='bui-radios'></i> 开关通电时状态与断电前相反</label><br/>"
+             "<label class='bui-radios-label'><input type='radio' name='power_on_state' value='3'/><i class='bui-radios'></i> 开关通电时保持断电前状态</label>"
+             "</td></tr>"));
 
-    page += F("<tr><td>开关模式</td><td>");
-    page += F("<label class='bui-radios-label'><input type='radio' name='power_mode' value='0'/><i class='bui-radios'></i> 自锁</label>&nbsp;&nbsp;&nbsp;&nbsp;");
-    page += F("<label class='bui-radios-label'><input type='radio' name='power_mode' value='1'/><i class='bui-radios'></i> 互锁</label>");
-    page += F("</td></tr>");
-    radioJs += F("setRadioValue('power_mode', '{v}');");
-    radioJs.replace(F("{v}"), String(config.power_mode));
+    server->sendContent_P(
+        PSTR("<tr><td>开关模式</td><td>"
+             "<label class='bui-radios-label'><input type='radio' name='power_mode' value='0'/><i class='bui-radios'></i> 自锁</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+             "<label class='bui-radios-label'><input type='radio' name='power_mode' value='1'/><i class='bui-radios'></i> 互锁</label>"
+             "</td></tr>"));
 
-    page += F("<tr><td>开关类型</td><td>");
-    page += F("<label class='bui-radios-label'><input type='radio' name='switch_mode' value='0'/><i class='bui-radios'></i> 自动</label>&nbsp;&nbsp;&nbsp;&nbsp;");
-    page += F("<label class='bui-radios-label'><input type='radio' name='switch_mode' value='1'/><i class='bui-radios'></i> 自复位开关</label>&nbsp;&nbsp;&nbsp;&nbsp;");
-    page += F("<label class='bui-radios-label'><input type='radio' name='switch_mode' value='2'/><i class='bui-radios'></i> 传统开关</label>");
-    page += F("</td></tr>");
-    radioJs += F("setRadioValue('switch_mode', '{v}');");
-    radioJs.replace(F("{v}"), String(config.switch_mode));
+    server->sendContent_P(
+        PSTR("<tr><td>开关类型</td><td>"
+             "<label class='bui-radios-label'><input type='radio' name='switch_mode' value='0'/><i class='bui-radios'></i> 自动</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+             "<label class='bui-radios-label'><input type='radio' name='switch_mode' value='1'/><i class='bui-radios'></i> 自复位开关</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+             "<label class='bui-radios-label'><input type='radio' name='switch_mode' value='2'/><i class='bui-radios'></i> 传统开关</label>"
+             "</td></tr>"));
 
     if (GPIO_PIN[GPIO_LED1] != 99)
     {
-        page += F("<tr><td>面板指示灯</td><td>");
-        page += F("<label class='bui-radios-label'><input type='radio' name='led_type' value='0'/><i class='bui-radios'></i> 无</label>&nbsp;&nbsp;&nbsp;&nbsp;");
-        page += F("<label class='bui-radios-label'><input type='radio' name='led_type' value='1'/><i class='bui-radios'></i> 普通</label>&nbsp;&nbsp;&nbsp;&nbsp;");
-        page += F("<label class='bui-radios-label'><input type='radio' name='led_type' value='2'/><i class='bui-radios'></i> 呼吸灯</label>&nbsp;&nbsp;&nbsp;&nbsp;");
-        //page += F("<label class='bui-radios-label'><input type='radio' name='led_type' value='3'/><i class='bui-radios'></i> WS2812</label>");
-        page += F("</td></tr>");
-        radioJs += F("setRadioValue('led_type', '{v}');");
-        radioJs.replace(F("{v}"), String(config.led_type));
+        server->sendContent_P(
+            PSTR("<tr><td>面板指示灯</td><td>"
+                 "<label class='bui-radios-label'><input type='radio' name='led_type' value='0'/><i class='bui-radios'></i> 无</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+                 "<label class='bui-radios-label'><input type='radio' name='led_type' value='1'/><i class='bui-radios'></i> 普通</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+                 "<label class='bui-radios-label'><input type='radio' name='led_type' value='2'/><i class='bui-radios'></i> 呼吸灯</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+                 //"<label class='bui-radios-label'><input type='radio' name='led_type' value='3'/><i class='bui-radios'></i> WS2812</label>"
+                 "</td></tr>"));
 
-        page += F("<tr><td>指示灯亮度</td><td><input type='range' min='1' max='100' name='led_light' value='{led_light}' onchange='ledLightRangOnChange(this)'/>&nbsp;<span>{led_light}%</span></td></tr>");
-        page.replace("{led_light}", String(config.led_light));
-        radioJs += F("function ledLightRangOnChange(the){the.nextSibling.nextSibling.innerHTML=the.value+'%'};");
+        snprintf_P(tmpData, sizeof(tmpData),
+                   PSTR("<tr><td>指示灯亮度</td><td><input type='range' min='1' max='100' name='led_light' value='%d' onchange='ledLightRangOnChange(this)'/>&nbsp;<span>%d%</span></td></tr>"),
+                   config.led_light, config.led_light);
+        server->sendContent_P(tmpData);
 
-        page += F("<tr><td>渐变时间</td><td><input type='number' name='relay_led_time' value='{v}'>毫秒</td></tr>");
-        page.replace(F("{v}"), String(config.led_time));
+        snprintf_P(tmpData, sizeof(tmpData),
+                   PSTR("<tr><td>渐变时间</td><td><input type='number' name='relay_led_time' value='%d'>毫秒</td></tr>"),
+                   config.led_time);
+        server->sendContent_P(tmpData);
 
         String tmp = "";
         for (uint8_t i = 0; i <= 23; i++)
@@ -358,75 +350,104 @@ void Relay::httpHtml(ESP8266WebServer *server)
             tmp.replace(F("{v}"), i < 10 ? "0" + String(i) : String(i));
         }
 
-        page += F("<tr><td>指示灯时间段</td><td>");
-        page += F("<select id='led_start' name='led_start'>");
-        page += tmp;
-        page += F("</select>");
-        page += F("&nbsp;&nbsp;到&nbsp;&nbsp;");
-        page += F("<select id='led_end' name='led_end'>");
-        page += tmp;
-        page += F("</select>");
+        server->sendContent_P(
+            PSTR("<tr><td>指示灯时间段</td><td>"
+                 "<select id='led_start' name='led_start'>"));
 
-        radioJs += F("id('led_start').value={v1};");
-        radioJs += F("id('led_end').value={v2};");
-        radioJs.replace(F("{v1}"), String(config.led_start));
-        radioJs.replace(F("{v2}"), String(config.led_end));
-        page += F("</td></tr>");
+        server->sendContent(tmp);
+
+        server->sendContent_P(
+            PSTR("</select>"
+                 "&nbsp;&nbsp;到&nbsp;&nbsp;"
+                 "<select id='led_end' name='led_end'>"));
+        server->sendContent(tmp);
+        server->sendContent_P(PSTR("</select>"));
+        server->sendContent_P(PSTR("</td></tr>"));
     }
+
     if (GPIO_PIN[GPIO_LED_POWER] != 99 || GPIO_PIN[GPIO_LED_POWER_INV] != 99)
     {
-        page += F("<tr><td>LED</td><td>");
-        page += F("<label class='bui-radios-label'><input type='radio' name='led' value='0'/><i class='bui-radios'></i> 常亮</label>&nbsp;&nbsp;&nbsp;&nbsp;");
-        page += F("<label class='bui-radios-label'><input type='radio' name='led' value='1'/><i class='bui-radios'></i> 常灭</label>&nbsp;&nbsp;&nbsp;&nbsp;");
-        page += F("<label class='bui-radios-label'><input type='radio' name='led' value='2'/><i class='bui-radios'></i> 闪烁</label><br>未连接WIFI或者MQTT时为快闪");
-        page += F("</td></tr>");
-        radioJs += F("setRadioValue('led', '{v}');");
-        radioJs.replace(F("{v}"), String(config.led));
+        server->sendContent_P(
+            PSTR("<tr><td>LED</td><td>"
+                 "<label class='bui-radios-label'><input type='radio' name='led' value='0'/><i class='bui-radios'></i> 常亮</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+                 "<label class='bui-radios-label'><input type='radio' name='led' value='1'/><i class='bui-radios'></i> 常灭</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+                 "<label class='bui-radios-label'><input type='radio' name='led' value='2'/><i class='bui-radios'></i> 闪烁</label><br>未连接WIFI或者MQTT时为快闪"
+                 "</td></tr>"));
     }
 
-    page += F("<tr><td>主动上报间隔</td><td><input type='number' min='0' max='3600' name='report_interval' required value='{v}'>&nbsp;秒，0关闭</td></tr>");
-    page.replace(F("{v}"), String(config.report_interval));
+    snprintf_P(tmpData, sizeof(tmpData),
+               PSTR("<tr><td>主动上报间隔</td><td><input type='number' min='0' max='3600' name='report_interval' required value='%d'>&nbsp;秒，0关闭</td></tr>"),
+               config.report_interval);
+    server->sendContent_P(tmpData);
 
-    page += F("<tr><td colspan='2'><button type='submit' class='btn-info'>设置</button><br>");
-    page += F("<button type='button' class='btn-success' style='margin-top:10px' onclick='window.location.href=\"/ha\"'>下载HA配置文件</button></td></tr>");
-    page += F("</tbody></table></form>");
+    server->sendContent_P(
+        PSTR("<tr><td colspan='2'><button type='submit' class='btn-info'>设置</button><br>"
+             "<button type='button' class='btn-success' style='margin-top:10px' onclick='window.location.href=\"/ha\"'>下载HA配置文件</button></td></tr>"
+             "</tbody></table></form>"));
 
 #ifdef USE_RCSWITCH
     if (radioReceive)
     {
-        page += F("<table class='gridtable'><thead><tr><th colspan='2'>射频管理</th></tr></thead><tbody>");
-        page += F("<tr><td>学习模式</td><td>");
+        server->sendContent_P(
+            PSTR("<table class='gridtable'><thead><tr><th colspan='2'>射频管理</th></tr></thead><tbody>"
+                 "<tr><td>学习模式</td><td>"));
         for (size_t ch = 0; ch < channels; ch++)
         {
-            page += F(" <button type='button' style='width:60px' onclick=\"ajaxPost('/rf_do', 'do=s&c={ch}')\" class='btn-success'>{ch}路</button>");
-            page.replace(F("{ch}"), String(ch + 1));
+            snprintf_P(tmpData, sizeof(tmpData),
+                       PSTR(" <button type='button' style='width:60px' onclick=\"ajaxPost('/rf_do', 'do=s&c=%d')\" class='btn-success'>%d路</button>"),
+                       ch + 1, ch + 1);
+            server->sendContent_P(tmpData);
         }
-        page += F("</td></tr>");
 
-        page += F("<tr><td>删除模式</td><td>");
+        server->sendContent_P(PSTR("</td></tr>"
+                                   "<tr><td>删除模式</td><td>"));
         for (size_t ch = 0; ch < channels; ch++)
         {
-            page += F(" <button type='button' style='width:60px' onclick=\"ajaxPost('/rf_do', 'do=d&c={ch}')\" class='btn-info'>{ch}路</button>");
-            page.replace(F("{ch}"), String(ch + 1));
+            snprintf_P(tmpData, sizeof(tmpData),
+                       PSTR(" <button type='button' style='width:60px' onclick=\"ajaxPost('/rf_do', 'do=d&c=%d')\" class='btn-info'>%d路</button>"),
+                       ch + 1, ch + 1);
+            server->sendContent_P(tmpData);
         }
-        page += F("</td></tr>");
 
-        page += F("<tr><td>全部删除</td><td>");
+        server->sendContent_P(
+            PSTR("</td></tr>"
+                 "<tr><td>全部删除</td><td>"));
         for (size_t ch = 0; ch < channels; ch++)
         {
-            page += F(" <button type='button' style='width:60px' onclick=\"javascript:if(confirm('确定要清空射频遥控？')){ajaxPost('/rf_do', 'do=c&c={ch}');}\" class='btn-danger'>{ch}路</button>");
-            page.replace(F("{ch}"), String(ch + 1));
+            snprintf_P(tmpData, sizeof(tmpData),
+                       PSTR(" <button type='button' style='width:60px' onclick=\"javascript:if(confirm('确定要清空射频遥控？')){ajaxPost('/rf_do', 'do=c&c=%d');}\" class='btn-danger'>%d路</button>"),
+                       ch + 1, ch + 1);
         }
-        page += F(" <button type='button' style='width:50px' onclick=\"javascript:if(confirm('确定要清空全部射频遥控？')){ajaxPost('/rf_do', 'do=c&c=0');}\" class='btn-danger'>全部</button>");
-        page += F("</td></tr>");
-        page += F("</tbody></table>");
+
+        server->sendContent_P(
+            PSTR(" <button type='button' style='width:50px' onclick=\"javascript:if(confirm('确定要清空全部射频遥控？')){ajaxPost('/rf_do', 'do=c&c=0');}\" class='btn-danger'>全部</button>"
+                 "</td></tr>"
+                 "</tbody></table>"));
     }
 #endif
 
-    radioJs += F("</script>");
+    server->sendContent_P(
+        PSTR("<script type='text/javascript'>"
+             "function setDataSub(data,key){if(key.substr(0,5)=='relay'){var t=id(key);var v=data[key];t.setAttribute('class',v==1?'btn-success':'btn-info');t.innerHTML=v==1?'开':'关';return true}return false}"));
 
-    server->sendContent(page);
-    server->sendContent(radioJs);
+    snprintf_P(tmpData, sizeof(tmpData), PSTR("id('module_type').value=%d;setRadioValue('power_on_state', '%d');setRadioValue('power_mode', '%d');setRadioValue('switch_mode', '%d');"),
+               config.module_type, config.power_on_state, config.power_mode, config.switch_mode);
+    server->sendContent_P(tmpData);
+
+    if (GPIO_PIN[GPIO_LED1] != 99)
+    {
+        snprintf_P(tmpData, sizeof(tmpData), PSTR("setRadioValue('led_type', '%d');id('led_start').value=%d;id('led_end').value=%d;"),
+                   config.led_type, config.led_start, config.led_end);
+        server->sendContent_P(tmpData);
+        server->sendContent_P(PSTR("function ledLightRangOnChange(the){the.nextSibling.nextSibling.innerHTML=the.value+'%'};"));
+    }
+
+    if (GPIO_PIN[GPIO_LED_POWER] != 99 || GPIO_PIN[GPIO_LED_POWER_INV] != 99)
+    {
+        snprintf_P(tmpData, sizeof(tmpData), PSTR("setRadioValue('led', '%d');"), config.led);
+        server->sendContent_P(tmpData);
+    }
+    server->sendContent_P(PSTR("</script>"));
 }
 
 void Relay::httpDo(ESP8266WebServer *server)
@@ -434,19 +455,22 @@ void Relay::httpDo(ESP8266WebServer *server)
     String c = server->arg(F("c"));
     if (c != F("1") && c != F("2") && c != F("3") && c != F("4"))
     {
-        server->send(200, F("text/html"), F("{\"code\":0,\"msg\":\"参数错误。\"}"));
+        server->send_P(200, PSTR("application/json"), PSTR("{\"code\":0,\"msg\":\"参数错误。\"}"));
         return;
     }
     uint8_t ch = c.toInt() - 1;
     if (ch > channels)
     {
-        server->send(200, F("text/html"), F("{\"code\":0,\"msg\":\"继电器数量错误。\"}"));
+        server->send_P(200, PSTR("application/json"), PSTR("{\"code\":0,\"msg\":\"继电器数量错误。\"}"));
         return;
     }
     String str = server->arg(F("do"));
-    switchRelay(ch, (str == "on" ? true : (str == "off" ? false : !bitRead(lastState, ch))));
+    switchRelay(ch, (str == F("on") ? true : (str == F("off") ? false : !bitRead(lastState, ch))));
 
-    server->send(200, F("text/html"), "{\"code\":1,\"msg\":\"操作成功\",\"data\":{" + httpGetStatus(server) + "}}");
+    server->setContentLength(CONTENT_LENGTH_UNKNOWN);
+    server->send_P(200, PSTR("application/json"), PSTR("{\"code\":1,\"msg\":\"操作成功\",\"data\":{"));
+    server->sendContent(httpGetStatus(server));
+    server->sendContent_P(PSTR("}}"));
 }
 
 #ifdef USE_RCSWITCH
@@ -454,19 +478,19 @@ void Relay::httpRadioReceive(ESP8266WebServer *server)
 {
     if (!radioReceive)
     {
-        server->send(200, F("text/html"), F("{\"code\":0,\"msg\":\"没有射频模块。\"}"));
+        server->send_P(200, PSTR("text/html"), PSTR("{\"code\":0,\"msg\":\"没有射频模块。\"}"));
         return;
     }
     String d = server->arg(F("do"));
     String c = server->arg(F("c"));
     if ((d != F("s") && d != F("d") && d != F("c")) || (c != F("0") && (c.toInt() < 1 || c.toInt() > channels)))
     {
-        server->send(200, F("text/html"), F("{\"code\":0,\"msg\":\"参数错误。\"}"));
+        server->send_P(200, PSTR("text/html"), PSTR("{\"code\":0,\"msg\":\"参数错误。\"}"));
         return;
     }
     if (radioReceive->studyCH != 0)
     {
-        server->send(200, F("text/html"), F("{\"code\":0,\"msg\":\"上一个操作未完成\"}"));
+        server->send_P(200, PSTR("text/html"), PSTR("{\"code\":0,\"msg\":\"上一个操作未完成\"}"));
         return;
     }
     if (d == F("s"))
@@ -489,7 +513,7 @@ void Relay::httpRadioReceive(ESP8266WebServer *server)
         }
     }
     Config::saveConfig();
-    server->send(200, F("text/html"), F("{\"code\":1,\"msg\":\"操作成功\"}"));
+    server->send_P(200, PSTR("text/html"), PSTR("{\"code\":1,\"msg\":\"操作成功\"}"));
 }
 #endif
 
@@ -538,7 +562,7 @@ void Relay::httpSetting(ESP8266WebServer *server)
 
     if (server->hasArg(F("module_type")) && !server->arg(F("module_type")).equals(String(config.module_type)))
     {
-        server->send(200, F("text/html"), F("{\"code\":1,\"msg\":\"已经更换模块类型 . . . 正在重启中。\"}"));
+        server->send_P(200, PSTR("text/html"), PSTR("{\"code\":1,\"msg\":\"已经更换模块类型 . . . 正在重启中。\"}"));
         config.module_type = server->arg(F("module_type")).toInt();
         Config::saveConfig();
         Led::blinkLED(400, 4);
@@ -547,7 +571,7 @@ void Relay::httpSetting(ESP8266WebServer *server)
     else
     {
         Config::saveConfig();
-        server->send(200, F("text/html"), F("{\"code\":1,\"msg\":\"已经设置成功。\"}"));
+        server->send_P(200, PSTR("text/html"), PSTR("{\"code\":1,\"msg\":\"已经设置成功。\"}"));
     }
 }
 
@@ -563,22 +587,24 @@ void Relay::httpHa(ESP8266WebServer *server)
     String availability = Mqtt::getTeleTopic(F("availability"));
     char cmndTopic[100];
     strcpy(cmndTopic, Mqtt::getCmndTopic(F("power1")).c_str());
-    server->sendContent(F("light:\r\n"));
+    server->sendContent_P(PSTR("light:\r\n"));
     for (size_t ch = 0; ch < channels; ch++)
     {
         cmndTopic[strlen(cmndTopic) - 1] = ch + 49;           // 48 + 1 + ch
         powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
-        server->sendContent(F("  - platform: mqtt\r\n    name: \""));
-        server->sendContent(UID);
-        server->sendContent(F("_l"));
-        server->sendContent(String((ch + 1)));
-        server->sendContent(F("\"\r\n    state_topic: \""));
-        server->sendContent(powerStatTopic);
-        server->sendContent(F("\"\r\n    command_topic: \""));
-        server->sendContent(cmndTopic);
-        server->sendContent(F("\"\r\n    payload_on: \"on\"\r\n    payload_off: \"off\"\r\n    availability_topic: \""));
-        server->sendContent(availability);
-        server->sendContent(F("\"\r\n    payload_available: \"online\"\r\n    payload_not_available: \"offline\"\r\n\r\n"));
+
+        snprintf_P(tmpData, sizeof(tmpData),
+                   PSTR("  - platform: mqtt\r\n"
+                        "    name: \"%s_l%d\"\r\n"
+                        "    state_topic: \"%s\"\r\n"
+                        "    command_topic: \"%s\"\r\n"
+                        "    payload_on: \"on\"\r\n"
+                        "    payload_off: \"off\"\r\n"
+                        "    availability_topic: \"%s\"\r\n"
+                        "    payload_available: \"online\"\r\n"
+                        "    payload_not_available: \"offline\"\r\n\r\n"),
+                   UID, ch + 1, powerStatTopic, cmndTopic, availability.c_str());
+        server->sendContent_P(tmpData);
     }
 }
 #pragma endregion

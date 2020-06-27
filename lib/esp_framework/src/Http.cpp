@@ -628,7 +628,7 @@ void Http::handleGetStatus()
     server->setContentLength(CONTENT_LENGTH_UNKNOWN);
     server->send_P(200, PSTR("text/html"), PSTR("{\"code\":1,\"msg\":\"\",\"data\":{"));
 
-    snprintf_P(tmpData, sizeof(tmpData), PSTR("\"uptime\":\"%s\""), Rtc::msToHumanString(millis()).c_str());
+    snprintf_P(tmpData, sizeof(tmpData), PSTR("\"uptime\":\"%s\",\"free_mem\":%d"), Rtc::msToHumanString(millis()).c_str(), ESP.getFreeHeap() / 1024);
     server->sendContent_P(tmpData);
 
 #ifndef DISABLE_MQTT
@@ -652,9 +652,6 @@ void Http::handleGetStatus()
         snprintf_P(tmpData, sizeof(tmpData), PSTR(",\"ip\":\"%s\""), WiFi.localIP().toString().c_str());
         server->sendContent_P(tmpData);
     }
-
-    snprintf_P(tmpData, sizeof(tmpData), PSTR(",\"free_mem\":%d"), ESP.getFreeHeap() / 1024);
-    server->sendContent_P(tmpData);
 
     if (module)
     {
@@ -911,71 +908,57 @@ void Http::handleModuleSetting()
     {
         return;
     }
-    if (server->hasArg(F("log_serial")) || server->hasArg(F("log_serial1"))
-#ifdef USE_SYSLOG
-        || server->hasArg(F("log_syslog"))
-#endif
-#ifdef WEB_LOG_SIZE
-        || server->hasArg(F("log_web"))
-#endif
-    )
+
+    int t = 0;
+    if (server->arg(F("log_serial")).equals(F("1")))
     {
-        int t = 0;
-        if (server->arg(F("log_serial")).equals(F("1")))
-        {
-            t = t | 1;
-        }
-        if (server->arg(F("log_serial1")).equals(F("1")))
-        {
-            t = t | 8;
-        }
+        t = t | 1;
+    }
+    if (server->arg(F("log_serial1")).equals(F("1")))
+    {
+        t = t | 8;
+    }
 #ifdef WEB_LOG_SIZE
-        if (server->arg(F("log_web")).equals(F("1")))
-        {
-            t = t | 4;
-        }
+    if (server->arg(F("log_web")).equals(F("1")))
+    {
+        t = t | 4;
+    }
 #endif
 
 #ifdef USE_SYSLOG
-        String log_syslog = server->arg(F("log_syslog"));
-        if (log_syslog.equals(F("1")))
+    if (server->arg(F("log_syslog")).equals(F("1")))
+    {
+        t = t | 2;
+        String log_syslog_host = server->arg(F("log_syslog_host"));
+        String log_syslog_port = server->arg(F("log_syslog_port"));
+        if (log_syslog_host.length() == 0)
         {
-            t = t | 2;
-            String log_syslog_host = server->arg(F("log_syslog_host"));
-            String log_syslog_port = server->arg(F("log_syslog_port"));
-            if (log_syslog_host.length() == 0)
-            {
-                server->send_P(200, PSTR("text/html"), PSTR("{\"code\":0,\"msg\":\"syslog服务器不能为空\"}"));
-                return;
-            }
-            strcpy(globalConfig.debug.server, log_syslog_host.c_str());
-            globalConfig.debug.port = log_syslog_port.toInt();
-            WiFi.hostByName(globalConfig.debug.server, Debug::ip);
+            server->send_P(200, PSTR("text/html"), PSTR("{\"code\":0,\"msg\":\"syslog服务器不能为空\"}"));
+            return;
         }
+        strcpy(globalConfig.debug.server, log_syslog_host.c_str());
+        globalConfig.debug.port = log_syslog_port.toInt();
+        WiFi.hostByName(globalConfig.debug.server, Debug::ip);
+    }
 #endif
 
-        if (server->arg(F("log_serial1")).equals(F("1")))
-        {
-            Serial1.begin(115200);
-        }
-        globalConfig.debug.type = t;
+    globalConfig.debug.type = t;
+    if ((8 & globalConfig.debug.type) == 8)
+    {
+        Serial1.begin(115200);
     }
 
     String ntp = server->arg(F("ntp"));
-    if ((globalConfig.wifi.ntp[0] == '\0' && ntp.length() > 0) || (globalConfig.wifi.ntp[0] != '\0' && ntp.length() == 0))
+    if (strcmp(globalConfig.wifi.ntp, ntp.c_str()) != 0)
     {
         strcpy(globalConfig.wifi.ntp, ntp.c_str());
         Rtc::init();
-    }
-    else
-    {
-        strcpy(globalConfig.wifi.ntp, ntp.c_str());
     }
 
     String uid = server->arg(F("uid"));
     strcpy(globalConfig.uid, uid.c_str());
     Config::saveConfig();
-    if (uid.length() == 0 || strncmp(globalConfig.uid, UID, uid.length()) != 0)
+    if (uid.length() == 0 || strcmp(globalConfig.uid, UID) != 0)
     {
 #ifndef DISABLE_MQTT
 #ifndef DISABLE_MQTT_DISCOVERY

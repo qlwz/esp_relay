@@ -1,4 +1,3 @@
-#include <EEPROM.h>
 #include "Framework.h"
 #include "Module.h"
 #include "Rtc.h"
@@ -74,7 +73,6 @@ void Framework::one(unsigned long baud)
     rebootCount = Rtc::rtcReboot.fast_reboot_count > BOOT_LOOP_OFFSET ? Rtc::rtcReboot.fast_reboot_count - BOOT_LOOP_OFFSET : 0;
 
     Serial.begin(baud);
-    EEPROM.begin(GlobalConfigMessage_size + 6);
     globalConfig.debug.type = 1;
 }
 

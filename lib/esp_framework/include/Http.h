@@ -5,13 +5,11 @@
 
 #include "Arduino.h"
 #include <ESP8266WebServer.h>
-#include <DNSServer.h>
 
 class Http
 {
 private:
     static bool isBegin;
-    static bool ismDNS;
     static void handleRoot();
 #ifndef DISABLE_MQTT
     static void handleMqtt();

@@ -1,4 +1,3 @@
-#include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
 #include <flash_hal.h>
 #include <FS.h>
@@ -10,7 +9,6 @@
 
 ESP8266WebServer *Http::server;
 bool Http::isBegin = false;
-bool Http::ismDNS = false;
 String Http::updaterError;
 
 void Http::handleRoot()
@@ -870,22 +868,6 @@ void Http::loop()
     if (isBegin)
     {
         server->handleClient();
-        if (ismDNS)
-        {
-            MDNS.update();
-        }
-        else if (WiFi.status() == WL_CONNECTED)
-        {
-            if (MDNS.begin(UID))
-            {
-                Serial1.println(PSTR("MDNS started"));
-                ismDNS = true;
-            }
-            else
-            {
-                Serial1.println(PSTR("MDNS started2"));
-            }
-        }
     }
 }
 

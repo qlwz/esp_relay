@@ -20,8 +20,7 @@ private:
     static void handledhcp();
     static void handleScanWifi();
     static void handleWifi();
-    static void handleRestart();
-    static void handleReset();
+    static void handleOperate();
     static void handleNotFound();
     static void handleModuleSetting();
     static void handleOTA();

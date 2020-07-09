@@ -99,10 +99,9 @@ void Framework::setup()
     }
     else
     {
-        String mac = WiFi.macAddress();
-        mac.replace(":", "");
-        mac = mac.substring(6, 12);
-        sprintf(UID, "%s_%s", module->getModuleName().c_str(), mac.c_str());
+        uint8_t mac[6];
+        wifi_get_macaddr(STATION_IF, mac);
+        sprintf(UID, "%s_%02x%02x%02x", module->getModuleName().c_str(), mac[3], mac[4], mac[5]);
     }
     Util::strlowr(UID);
 

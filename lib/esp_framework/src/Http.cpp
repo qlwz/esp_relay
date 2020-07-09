@@ -208,8 +208,8 @@ void Http::handleRoot()
         PSTR("<tr><td colspan='2'><button type='submit' class='btn-info'>设置</button></td></tr>"
              "</tbody></table></form>"
              "<div>"
-             "<button type='button' class='btn-danger' style='margin-top: 10px' onclick=\"javascript:if(confirm('确定要重启模块？')){ajaxPost('/restart');}\">重启模块</button>"
-             "<button type='button' class='btn-danger' style='margin-top: 10px' onclick=\"javascript:if(confirm('确定要重置模块？')){ajaxPost('/reset');}\">重置模块</button>"
+             "<button type='button' class='btn-danger' style='margin-top: 10px' onclick=\"javascript:if(confirm('确定要重启模块？')){ajaxPost('/operate', 'd=1');}\">重启模块</button>"
+             "<button type='button' class='btn-danger' style='margin-top: 10px' onclick=\"javascript:if(confirm('确定要重置模块？')){ajaxPost('/operate', 'd=2');}\">重置模块</button>"
              "</div>"
              "</div>"));
     // TAB 3 End
@@ -228,13 +228,15 @@ void Http::handleRoot()
                ESP.getChipId(), ESP.getFlashChipId(), ESP.getFlashChipRealSize() / 1024, ESP.getFlashChipSize() / 1024, ESP.getSketchSize() / 1024);
     server->sendContent_P(tmpData);
 
+    uint8_t mac[6];
+    wifi_get_macaddr(STATION_IF, mac);
     snprintf_P(tmpData, sizeof(tmpData),
                PSTR("<tr><td>空闲程序空间</td><td>%d kB</td></tr>"
                     "<tr><td>内核和SDK版本</td><td>" ARDUINO_ESP8266_RELEASE "%s</td></tr>"
                     "<tr><td>重启原因</td><td>%s</td></tr>"
-                    "<tr><td>MAC地址</td><td>%s</td></tr>"
+                    "<tr><td>MAC地址</td><td>%02X:%02X:%02X:%02X:%02X:%02X</td></tr>"
                     "</tbody></table>"),
-               ESP.getFreeSketchSpace() / 1024, ESP.getSdkVersion(), ESP.getResetReason().c_str(), WiFi.macAddress().c_str());
+               ESP.getFreeSketchSpace() / 1024, ESP.getSdkVersion(), ESP.getResetReason().c_str(), mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     server->sendContent_P(tmpData);
 
     snprintf_P(tmpData, sizeof(tmpData),
@@ -554,33 +556,26 @@ void Http::handleWifi()
     }
 }
 
-void Http::handleRestart()
+void Http::handleOperate()
 {
     if (!checkAuth())
     {
         return;
     }
-    Config::saveConfig();
-    server->send_P(200, PSTR("text/html"), PSTR("{\"code\":1,\"msg\":\"设备正在重启 . . .\"}"));
-    delay(200);
-
-    Led::blinkLED(400, 4);
-    ESP.restart();
-}
-
-void Http::handleReset()
-{
-    if (!checkAuth())
+    String d = server->arg(F("d")); // 1：重启模块 2：重置模块
+    if (d == F("1"))
     {
-        return;
+        server->send_P(200, PSTR("text/html"), PSTR("{\"code\":1,\"msg\":\"设备正在重启 . . .\"}"));
     }
-    server->send_P(200, PSTR("text/html"), PSTR("{\"code\":1,\"msg\":\"正在重置模块 . . . 设备将会重启。\"}"));
+    else if (d == F("2"))
+    {
+        Config::resetConfig();
+        Config::saveConfig();
+        server->send_P(200, PSTR("text/html"), PSTR("{\"code\":1,\"msg\":\"正在重置模块 . . . 设备将会重启。\"}"));
+    }
     delay(200);
 
     Led::blinkLED(400, 4);
-
-    Config::resetConfig();
-    Config::saveConfig();
     ESP.restart();
 }
 
@@ -837,8 +832,7 @@ void Http::begin()
     server->on(F("/dhcp"), handledhcp);
     server->on(F("/scan_wifi"), handleScanWifi);
     server->on(F("/wifi"), handleWifi);
-    server->on(F("/restart"), handleRestart);
-    server->on(F("/reset"), handleReset);
+    server->on(F("/operate"), handleOperate);
     server->on(F("/module_setting"), handleModuleSetting);
     server->on(F("/ota"), handleOTA);
     server->on(F("/get_status"), handleGetStatus);

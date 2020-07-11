@@ -1,6 +1,9 @@
 #include "Relay.h"
 #include "RadioReceive.h"
 #include "Rtc.h"
+#ifdef USE_HOMEKIT
+#include "HomeKit.h"
+#endif
 
 #pragma region 继承
 
@@ -174,25 +177,18 @@ void Relay::saveConfig(bool isEverySecond)
 
 #pragma region MQTT
 
-void Relay::mqttCallback(String topicStr, String str)
+void Relay::mqttCallback(char *topic, char *payload, char *cmnd)
 {
-    if (channels >= 1 && topicStr.endsWith("/power1"))
+    if (strlen(cmnd) == 6 && strncmp(cmnd, "power", 5) == 0) // strlen("power1") = 6
     {
-        switchRelay(0, (str == "on" ? true : (str == "off" ? false : !bitRead(lastState, 0))));
+        uint8_t ch = cmnd[5] - 49;
+        if (ch < channels)
+        {
+            switchRelay(ch, (strcmp(payload, "on") == 0 ? true : (strcmp(payload, "off") == 0 ? false : !bitRead(lastState, ch))), true);
+            return;
+        }
     }
-    else if (channels >= 2 && topicStr.endsWith("/power2"))
-    {
-        switchRelay(1, (str == "on" ? true : (str == "off" ? false : !bitRead(lastState, 1))));
-    }
-    else if (channels >= 3 && topicStr.endsWith("/power3"))
-    {
-        switchRelay(2, (str == "on" ? true : (str == "off" ? false : !bitRead(lastState, 2))));
-    }
-    else if (channels >= 4 && topicStr.endsWith("/power4"))
-    {
-        switchRelay(3, (str == "off" ? true : (str == "off" ? false : !bitRead(lastState, 3))));
-    }
-    else if (topicStr.endsWith("/report"))
+    else if (strcmp(cmnd, "report") == 0)
     {
         reportPower();
     }
@@ -251,6 +247,9 @@ void Relay::httpAdd(ESP8266WebServer *server)
     server->on(F("/ha"), std::bind(&Relay::httpHa, this, server));
 #ifdef USE_RCSWITCH
     server->on(F("/rf_do"), std::bind(&Relay::httpRadioReceive, this, server));
+#endif
+#ifdef USE_HOMEKIT
+    server->on(F("/homekit"), std::bind(&homekit_http, server));
 #endif
 }
 
@@ -426,6 +425,10 @@ void Relay::httpHtml(ESP8266WebServer *server)
     }
 #endif
 
+#ifdef USE_HOMEKIT
+    homekit_html(server);
+#endif
+
     server->sendContent_P(
         PSTR("<script type='text/javascript'>"
              "function setDataSub(data,key){if(key.substr(0,5)=='relay'){var t=id(key);var v=data[key];t.setAttribute('class',v==1?'btn-success':'btn-info');t.innerHTML=v==1?'开':'关';return true}return false}"));
@@ -582,7 +585,7 @@ void Relay::httpHa(ESP8266WebServer *server)
 
     server->setContentLength(CONTENT_LENGTH_UNKNOWN);
     server->sendHeader(F("Content-Disposition"), attachment);
-    server->send(200, F("Content-Type: application/octet-stream"), "");
+    server->send_P(200, PSTR("Content-Type: application/octet-stream"), "");
 
     String availability = Mqtt::getTeleTopic(F("availability"));
     char cmndTopic[100];

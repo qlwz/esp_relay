@@ -2,6 +2,7 @@
 #include <flash_hal.h>
 #include <FS.h>
 #include "StreamString.h"
+#include <ESP8266HTTPClient.h>
 #include <ESP8266httpUpdate.h>
 #include "Http.h"
 #include "Module.h"
@@ -339,7 +340,6 @@ void Http::handleMqtt()
     strcpy(globalConfig.mqtt.topic, topic.c_str());
     globalConfig.mqtt.interval = server->arg(F("interval")).toInt();
     Config::saveConfig();
-    Mqtt::setTopic();
 
     if (Mqtt::mqttClient.connected())
     {

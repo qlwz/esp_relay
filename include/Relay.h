@@ -10,18 +10,9 @@
 
 #define MAX_STUDY_RECEIVER_NUM 10 // 遥控最大学习数
 
-const char HASS_DISCOVER_RELAY[] PROGMEM =
-    "{\"name\":\"%s_%d\","
-    "\"cmd_t\":\"%s\","
-    "\"stat_t\":\"%s\","
-    "\"pl_off\":\"off\","
-    "\"pl_on\":\"on\","
-    "\"avty_t\":\"%s\","
-    "\"pl_avail\":\"online\","
-    "\"pl_not_avail\":\"offline\"}";
-
 static const uint8_t DEBOUNCED_STATE = 0b00000001;
 static const uint8_t UNSTABLE_STATE = 0b00000010;
+static const uint8_t BUTTON_DEBOUNCE_TIME = 50; // 消抖时间
 
 #ifdef USE_RCSWITCH
 class RadioReceive;
@@ -36,8 +27,7 @@ private:
     // 按键
     // 等待开关再次切换的时间（以毫秒为单位）。
     // 300对我来说效果很好，几乎没有引起注意。 如果您不想使用此功能，请设置为0。
-    unsigned long specialFunctionTimeout = 300;
-    uint8_t buttonDebounceTime = 50;
+    uint16_t specialFunctionTimeout = 300;
     unsigned long buttonTimingStart[4];
     unsigned long buttonIntervalStart[4];
     uint8_t buttonStateFlag[4];
@@ -46,8 +36,8 @@ private:
     void cheackButton(uint8_t ch);
 
     // PWM
-    int ledLevel = 0;
-    int ledLight = 2023;
+    uint16_t ledLevel = 0;
+    uint16_t ledLight = 2023;
     bool ledUp = true;
     bool canLed = true;
     void led(uint8_t ch, bool isOn);
@@ -64,6 +54,7 @@ private:
 
     void loadModule(uint8_t module);
     void reportPower();
+    void reportChannel(uint8_t ch);
 
 public:
     uint8_t GPIO_PIN[GPIO_MAX];
@@ -79,7 +70,7 @@ public:
     void init();
     String getModuleName() { return F("relay"); }
     String getModuleCNName();
-    String getModuleVersion() { return F("2020.02.29.2100"); }
+    String getModuleVersion() { return F("2020.09.05.2200"); }
     String getModuleAuthor() { return F("情留メ蚊子"); }
     bool moduleLed();
 

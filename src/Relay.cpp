@@ -219,7 +219,15 @@ void Relay::mqttDiscovery(bool isEnable)
         {
             cmndTopic[strlen(cmndTopic) - 1] = ch + 49;           // 48 + 1 + ch
             powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
-            sprintf(message, HASS_DISCOVER_RELAY, UID, (ch + 1),
+            sprintf(message, PSTR("{\"name\":\"%s_%d\","
+                                  "\"cmd_t\":\"%s\","
+                                  "\"stat_t\":\"%s\","
+                                  "\"pl_off\":\"off\","
+                                  "\"pl_on\":\"on\","
+                                  "\"avty_t\":\"%s\","
+                                  "\"pl_avail\":\"online\","
+                                  "\"pl_not_avail\":\"offline\"}"),
+                    UID, (ch + 1),
                     cmndTopic,
                     powerStatTopic,
                     availability.c_str());
@@ -663,7 +671,7 @@ void Relay::ledPWM(uint8_t ch, bool isOn)
     {
         if (!ledTicker.active())
         {
-            ledTicker.attach_ms(config.led_time, std::bind(&Relay::ledTickerHandle, this));
+            ledTicker.attach_ms(config.led_time, []() { ((Relay *)module)->ledTickerHandle(); });
             Debug::AddInfo(PSTR("ledTicker active"));
         }
     }
@@ -735,7 +743,6 @@ void Relay::switchRelay(uint8_t ch, bool isOn, bool isSave)
         Debug::AddInfo(PSTR("invalid channel: %d"), ch);
         return;
     }
-    Debug::AddInfo(PSTR("Relay %d . . . %s"), ch + 1, isOn ? "ON" : "OFF");
 
     if (isOn && config.power_mode == 1)
     {
@@ -749,10 +756,10 @@ void Relay::switchRelay(uint8_t ch, bool isOn, bool isSave)
     }
 
     bitWrite(lastState, ch, isOn);
+    Debug::AddInfo(PSTR("Relay %d . . . %s"), ch + 1, isOn ? "ON" : "OFF");
     digitalWrite(GPIO_PIN[GPIO_REL1 + ch], isOn ? HIGH : LOW);
 
-    powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
-    Mqtt::publish(powerStatTopic, isOn ? "on" : "off", globalConfig.mqtt.retain);
+    reportChannel(ch);
 
     if (isSave && config.power_on_state > 0)
     {
@@ -777,7 +784,7 @@ void Relay::cheackButton(uint8_t ch)
         buttonTimingStart[ch] = millis();
         buttonStateFlag[ch] ^= UNSTABLE_STATE;
     }
-    else if (millis() - buttonTimingStart[ch] >= buttonDebounceTime)
+    else if (millis() - buttonTimingStart[ch] >= BUTTON_DEBOUNCE_TIME)
     {
         if (currentState != ((buttonStateFlag[ch] & DEBOUNCED_STATE) != 0))
         {
@@ -867,7 +874,12 @@ void Relay::reportPower()
 {
     for (size_t ch = 0; ch < channels; ch++)
     {
-        powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
-        Mqtt::publish(powerStatTopic, bitRead(lastState, ch) ? "on" : "off", globalConfig.mqtt.retain);
+        reportChannel(ch);
     }
+}
+
+void Relay::reportChannel(uint8_t ch)
+{
+    powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
+    Mqtt::publish(powerStatTopic, bitRead(lastState, ch) ? "on" : "off", globalConfig.mqtt.retain);
 }

@@ -37,7 +37,7 @@ void RadioReceive::delAll()
 
 void RadioReceive::loop()
 {
-    if (studyCH != 0 && millis() > studyTime + 10000) // 10秒超时
+    if (studyCH != 0 && millis() - studyTime > 10000) // 10秒超时
     {
         Debug::AddInfo(PSTR("Receive study timeout"));
         studyCH = 0;
@@ -51,7 +51,7 @@ void RadioReceive::loop()
     unsigned long value = mySwitch->getReceivedValue();
     //Debug::AddError(PSTR("315Mhz: %d"), value);
     mySwitch->resetAvailable();
-    if (lastVaue == value && millis() < lastTime + 300)
+    if (lastVaue == value && millis() - lastTime < 300)
     {
         return;
     }
@@ -77,8 +77,8 @@ void RadioReceive::loop()
             //Debug::AddInfo(PSTR("study channel %d index %d"), ch, config.relay_study_index[ch]);
             for (size_t i = 0; i < relay->config.study_index[ch]; i++)
             {
-                //Debug::AddInfo(PSTR("study id %d"), (ch * 10) + i);
-                if (relay->config.study[(ch * 10) + i] == value)
+                //Debug::AddInfo(PSTR("study id %d"), (ch * MAX_STUDY_RECEIVER_NUM) + i);
+                if (relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + i] == value)
                 {
                     isOk = true;
                     Debug::AddInfo(PSTR("Received %d to channel %d"), value, ch + 1);
@@ -100,11 +100,11 @@ void RadioReceive::loop()
         uint8_t index = relay->config.study_index[ch];
         for (int i = 0; i <= index; ++i)
         {
-            if (relay->config.study[(ch * 10) + i] == value)
+            if (relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + i] == value)
             {
                 for (int j = i; j <= index - 1; j++)
                 {
-                    relay->config.study[(ch * 10) + j] = relay->config.study[(ch * 10) + (j + 1)];
+                    relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + j] = relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + (j + 1)];
                 }
                 relay->config.study_index[ch] = --index;
                 Config::saveConfig();
@@ -122,7 +122,7 @@ void RadioReceive::loop()
         Debug::AddInfo(PSTR("study index %d %d"), ch, index);
         for (uint8_t i = 0; i < index; i++)
         {
-            if (relay->config.study[(ch * 10) + i] == value)
+            if (relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + i] == value)
             {
                 Debug::AddInfo(PSTR("Received %d study to channel %d is has"), value, (ch) + 1);
                 studyCH = 0;
@@ -134,13 +134,13 @@ void RadioReceive::loop()
         {
             for (int j = 0; j < index - 1; j++)
             {
-                relay->config.study[(ch * 10) + j] = relay->config.study[(ch * 10) + (j + 1)];
+                relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + j] = relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + (j + 1)];
             }
-            relay->config.study[(ch * 10) + (MAX_STUDY_RECEIVER_NUM - 1)] = value;
+            relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + (MAX_STUDY_RECEIVER_NUM - 1)] = value;
         }
         else
         {
-            relay->config.study[(ch * 10) + index] = value;
+            relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + index] = value;
             relay->config.study_index[ch] = ++index;
         }
         Config::saveConfig();

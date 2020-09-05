@@ -12,8 +12,8 @@ class RadioReceive
 protected:
     RCSwitch *mySwitch;
     unsigned long lastVaue = 0;
-    int lastTime = 0;
-    int studyTime = 0;
+    unsigned long lastTime = 0;
+    unsigned long studyTime = 0;
     Relay *relay;
 
 public:

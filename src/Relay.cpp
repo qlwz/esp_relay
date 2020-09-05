@@ -800,7 +800,7 @@ void Relay::cheackButton(uint8_t ch)
             }
             else
             {
-                if (millis() > lastTime[ch] + 300)
+                if (millis() - lastTime[ch] > 300)
                 {
                     switchRelay(ch, !bitRead(lastState, ch), true);
                     lastTime[ch] = millis();

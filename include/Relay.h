@@ -41,8 +41,8 @@ private:
     unsigned long buttonTimingStart[4];
     unsigned long buttonIntervalStart[4];
     uint8_t buttonStateFlag[4];
-    unsigned long switchCount[4];
-    int lastTime[4];
+    uint8_t switchCount[4];
+    unsigned long lastTime[4];
     void cheackButton(uint8_t ch);
 
     // PWM

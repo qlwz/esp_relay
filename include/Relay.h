@@ -57,7 +57,6 @@ private:
     void reportChannel(uint8_t ch);
 
 public:
-    uint8_t GPIO_PIN[GPIO_MAX];
     RelayConfigMessage config;
     uint8_t lastState = 0;
     uint8_t channels = 0;

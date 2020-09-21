@@ -5,6 +5,12 @@
 #include "HomeKit.h"
 #endif
 
+uint8_t LED_PIN = 99;
+uint8_t RFRECV_PIN = 99;
+uint8_t RELAY_PIN[MAX_RELAY_NUM];
+uint8_t BOTTON_PIN[MAX_RELAY_NUM + MAX_PWM_NUM];
+uint8_t RELAY_LED_PIN[MAX_RELAY_NUM + MAX_PWM_NUM];
+
 #pragma region 继承
 
 String Relay::getModuleCNName()
@@ -15,36 +21,32 @@ String Relay::getModuleCNName()
 void Relay::init()
 {
     loadModule(config.module_type);
-    if (GPIO_PIN[GPIO_LED_POWER] != 99)
+    if (LED_PIN != 99)
     {
-        Led::init(GPIO_PIN[GPIO_LED_POWER], HIGH);
-    }
-    else if (GPIO_PIN[GPIO_LED_POWER_INV] != 99)
-    {
-        Led::init(GPIO_PIN[GPIO_LED_POWER_INV], LOW);
+        Led::init(LED_PIN > 50 ? LED_PIN - 50 : LED_PIN, LED_PIN > 50 ? LOW : HIGH);
     }
 
 #ifdef USE_RCSWITCH
-    if (GPIO_PIN[GPIO_RFRECV] != 99)
+    if (RFRECV_PIN != 99)
     {
         radioReceive = new RadioReceive();
-        radioReceive->init(this, GPIO_PIN[GPIO_RFRECV]);
+        radioReceive->init(this, RFRECV_PIN);
     }
 #endif
 
     channels = 0;
-    for (uint8_t ch = 0; ch < 4; ch++)
+    for (uint8_t ch = 0; ch < (sizeof(RELAY_PIN) / sizeof(RELAY_PIN[0])); ch++)
     {
-        if (GPIO_PIN[GPIO_REL1 + ch] == 99)
+        if (RELAY_PIN[ch] == 99)
         {
             continue;
         }
         channels++;
 
-        pinMode(GPIO_PIN[GPIO_REL1 + ch], OUTPUT); // 继电器
-        if (GPIO_PIN[GPIO_LED1 + ch] != 99)
+        pinMode(RELAY_PIN[ch], OUTPUT); // 继电器
+        if (RELAY_LED_PIN[ch] != 99)
         {
-            pinMode(GPIO_PIN[GPIO_LED1 + ch], OUTPUT); // LED
+            pinMode(RELAY_LED_PIN[ch], OUTPUT); // LED
         }
     }
 
@@ -52,10 +54,10 @@ void Relay::init()
 
     for (uint8_t ch = 0; ch < channels; ch++)
     {
-        if (GPIO_PIN[GPIO_KEY1 + ch] != 99)
+        if (BOTTON_PIN[ch] != 99)
         {
-            pinMode(GPIO_PIN[GPIO_KEY1 + ch], INPUT_PULLUP);
-            if (digitalRead(GPIO_PIN[GPIO_KEY1 + ch]))
+            pinMode(BOTTON_PIN[ch], INPUT_PULLUP);
+            if (digitalRead(BOTTON_PIN[ch]))
             {
                 buttonStateFlag[ch] |= DEBOUNCED_STATE | UNSTABLE_STATE;
             }
@@ -327,7 +329,7 @@ void Relay::httpHtml(ESP8266WebServer *server)
              "<label class='bui-radios-label'><input type='radio' name='switch_mode' value='2'/><i class='bui-radios'></i> 传统开关</label>"
              "</td></tr>"));
 
-    if (GPIO_PIN[GPIO_LED1] != 99)
+    if (RELAY_LED_PIN[0] != 99)
     {
         server->sendContent_P(
             PSTR("<tr><td>面板指示灯</td><td>"
@@ -338,7 +340,7 @@ void Relay::httpHtml(ESP8266WebServer *server)
                  "</td></tr>"));
 
         snprintf_P(tmpData, sizeof(tmpData),
-                   PSTR("<tr><td>指示灯亮度</td><td><input type='range' min='1' max='100' name='led_light' value='%d' onchange='ledLightRangOnChange(this)'/>&nbsp;<span>%d%</span></td></tr>"),
+                   PSTR("<tr><td>指示灯亮度</td><td><input type='range' min='1' max='100' name='led_light' value='%d' onchange='ledLightRangOnChange(this)'/>&nbsp;<span>%d</span></td></tr>"),
                    config.led_light, config.led_light);
         server->sendContent_P(tmpData);
 
@@ -372,7 +374,7 @@ void Relay::httpHtml(ESP8266WebServer *server)
         server->sendContent_P(PSTR("</td></tr>"));
     }
 
-    if (GPIO_PIN[GPIO_LED_POWER] != 99 || GPIO_PIN[GPIO_LED_POWER_INV] != 99)
+    if (LED_PIN != 99)
     {
         server->sendContent_P(
             PSTR("<tr><td>LED</td><td>"
@@ -445,15 +447,15 @@ void Relay::httpHtml(ESP8266WebServer *server)
                config.module_type, config.power_on_state, config.power_mode, config.switch_mode);
     server->sendContent_P(tmpData);
 
-    if (GPIO_PIN[GPIO_LED1] != 99)
+    if (RELAY_LED_PIN[0] != 99)
     {
         snprintf_P(tmpData, sizeof(tmpData), PSTR("setRadioValue('led_type', '%d');id('led_start').value=%d;id('led_end').value=%d;"),
                    config.led_type, config.led_start, config.led_end);
         server->sendContent_P(tmpData);
-        server->sendContent_P(PSTR("function ledLightRangOnChange(the){the.nextSibling.nextSibling.innerHTML=the.value+'%'};"));
+        server->sendContent_P(PSTR("function ledLightRangOnChange(the){the.nextSibling.nextSibling.innerHTML=the.value};"));
     }
 
-    if (GPIO_PIN[GPIO_LED_POWER] != 99 || GPIO_PIN[GPIO_LED_POWER_INV] != 99)
+    if (LED_PIN != 99)
     {
         snprintf_P(tmpData, sizeof(tmpData), PSTR("setRadioValue('led', '%d');"), config.led);
         server->sendContent_P(tmpData);
@@ -593,12 +595,13 @@ void Relay::httpHa(ESP8266WebServer *server)
 
     server->setContentLength(CONTENT_LENGTH_UNKNOWN);
     server->sendHeader(F("Content-Disposition"), attachment);
-    server->send_P(200, PSTR("Content-Type: application/octet-stream"), "");
+    server->send_P(200, PSTR("Content-Type: application/octet-stream"), "light:\r\n");
 
     String availability = Mqtt::getTeleTopic(F("availability"));
     char cmndTopic[100];
     strcpy(cmndTopic, Mqtt::getCmndTopic(F("power1")).c_str());
-    server->sendContent_P(PSTR("light:\r\n"));
+
+    //server->sendContent_P(PSTR("light:\r\n"));
     for (size_t ch = 0; ch < channels; ch++)
     {
         cmndTopic[strlen(cmndTopic) - 1] = ch + 49;           // 48 + 1 + ch
@@ -626,9 +629,9 @@ void Relay::ledTickerHandle()
 {
     for (uint8_t ch = 0; ch < channels; ch++)
     {
-        if (!bitRead(lastState, ch) && GPIO_PIN[GPIO_LED1 + ch] != 99)
+        if (!bitRead(lastState, ch) && RELAY_LED_PIN[ch] != 99)
         {
-            analogWrite(GPIO_PIN[GPIO_LED1 + ch], ledLevel);
+            analogWrite(RELAY_LED_PIN[ch], ledLevel);
         }
     }
     if (ledUp)
@@ -653,7 +656,7 @@ void Relay::ledPWM(uint8_t ch, bool isOn)
 {
     if (isOn)
     {
-        analogWrite(GPIO_PIN[GPIO_LED1 + ch], 0);
+        analogWrite(RELAY_LED_PIN[ch], 0);
         if (ledTicker.active())
         {
             for (uint8_t ch2 = 0; ch2 < channels; ch2++)
@@ -679,15 +682,15 @@ void Relay::ledPWM(uint8_t ch, bool isOn)
 
 void Relay::led(uint8_t ch, bool isOn)
 {
-    if (config.led_type == 0 || GPIO_PIN[GPIO_LED1 + ch] == 99)
+    if (config.led_type == 0 || RELAY_LED_PIN[ch] == 99)
     {
         return;
     }
 
     if (config.led_type == 1)
     {
-        //digitalWrite(GPIO_PIN[GPIO_LED1 + ch], isOn ? LOW : HIGH);
-        analogWrite(GPIO_PIN[GPIO_LED1 + ch], isOn ? 0 : ledLight);
+        //digitalWrite(RELAY_LED_PIN[ch], isOn ? LOW : HIGH);
+        analogWrite(RELAY_LED_PIN[ch], isOn ? 0 : ledLight);
     }
     else if (config.led_type == 2)
     {
@@ -725,9 +728,9 @@ bool Relay::checkCanLed(bool re)
         Debug::AddInfo(result ? PSTR("led can light") : PSTR("led can not light"));
         for (uint8_t ch = 0; ch < channels; ch++)
         {
-            if (GPIO_PIN[GPIO_LED1 + ch] != 99)
+            if (RELAY_LED_PIN[ch] != 99)
             {
-                result &&config.led_type != 0 ? led(ch, bitRead(lastState, ch)) : analogWrite(GPIO_PIN[GPIO_LED1 + ch], 0);
+                result &&config.led_type != 0 ? led(ch, bitRead(lastState, ch)) : analogWrite(RELAY_LED_PIN[ch], 0);
             }
         }
     }
@@ -757,7 +760,7 @@ void Relay::switchRelay(uint8_t ch, bool isOn, bool isSave)
 
     bitWrite(lastState, ch, isOn);
     Debug::AddInfo(PSTR("Relay %d . . . %s"), ch + 1, isOn ? "ON" : "OFF");
-    digitalWrite(GPIO_PIN[GPIO_REL1 + ch], isOn ? HIGH : LOW);
+    digitalWrite(RELAY_PIN[ch], isOn ? HIGH : LOW);
 
     reportChannel(ch);
 
@@ -774,11 +777,11 @@ void Relay::switchRelay(uint8_t ch, bool isOn, bool isSave)
 
 void Relay::cheackButton(uint8_t ch)
 {
-    if (GPIO_PIN[GPIO_KEY1 + ch] == 99)
+    if (BOTTON_PIN[ch] == 99)
     {
         return;
     }
-    bool currentState = digitalRead(GPIO_PIN[GPIO_KEY1 + ch]);
+    bool currentState = digitalRead(BOTTON_PIN[ch]);
     if (currentState != ((buttonStateFlag[ch] & UNSTABLE_STATE) != 0))
     {
         buttonTimingStart[ch] = millis();
@@ -846,27 +849,59 @@ void Relay::cheackButton(uint8_t ch)
 
 void Relay::loadModule(uint8_t module)
 {
-    for (uint16_t i = 0; i < GPIO_MAX; i++)
+    for (size_t i = 0; i < MAX_RELAY_NUM; i++)
     {
-        GPIO_PIN[i] = 99;
+        RELAY_PIN[i] = 99;
+        BOTTON_PIN[i] = 99;
+        RELAY_LED_PIN[i] = 99;
     }
 
     mytmplt m;
     memcpy_P(&m, &Modules[module], sizeof(m));
 
-    uint8_t j = 0;
-    for (uint8_t i = 0; i < sizeof(m.io); i++)
+    uint8_t pos = 0;
+    uint8_t t, l, v;
+    while (true)
     {
-        if (6 == i)
+        t = m.io[pos++];
+        if (t < 1 || t > 8)
         {
-            j = 9;
+            break;
         }
-        if (8 == i)
+        l = m.io[pos++];
+        if (l > 8)
         {
-            j = 12;
+            break;
         }
-        GPIO_PIN[m.io[i]] = j;
-        j++;
+        for (size_t i = 0; i < l; i++)
+        {
+            switch (t)
+            {
+            case 1:
+                LED_PIN = m.io[pos++];
+                //Debug::AddInfo(PSTR("LED_PIN %d"), LED_PIN);
+                break;
+            case 2:
+                RELAY_PIN[i] = m.io[pos++];
+                //Debug::AddInfo(PSTR("RELAY_PIN %d"), RELAY_PIN[i]);
+                break;
+            case 3:
+                BOTTON_PIN[i] = m.io[pos++];
+                //Debug::AddInfo(PSTR("BOTTON_PIN %d"), BOTTON_PIN[i]);
+                break;
+            case 4:
+                RELAY_LED_PIN[i] = m.io[pos++];
+                //Debug::AddInfo(PSTR("RELAY_LED_PIN %d"), RELAY_LED_PIN[i]);
+                break;
+            case 5:
+                RFRECV_PIN = m.io[pos++];
+                //Debug::AddInfo(PSTR("RFRECV_PIN %d"), RFRECV_PIN);
+                break;
+            default:
+                m.io[pos++];
+                break;
+            }
+        }
     }
 }
 

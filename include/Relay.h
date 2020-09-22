@@ -37,7 +37,7 @@ private:
 
     // PWM
     uint16_t ledLevel = 0;
-    uint16_t ledLight = 2023;
+    uint16_t ledLight = 1023;
     bool ledUp = true;
     bool canLed = true;
     void led(uint8_t ch, bool isOn);
@@ -45,11 +45,11 @@ private:
     void ledTickerHandle();
     bool checkCanLed(bool re = false);
 
-    void httpDo(ESP8266WebServer *server);
-    void httpSetting(ESP8266WebServer *server);
-    void httpHa(ESP8266WebServer *server);
+    void httpDo(WebServer *server);
+    void httpSetting(WebServer *server);
+    void httpHa(WebServer *server);
 #ifdef USE_RCSWITCH
-    void httpRadioReceive(ESP8266WebServer *server);
+    void httpRadioReceive(WebServer *server);
 #endif
 
     void loadModule(uint8_t module);
@@ -84,9 +84,9 @@ public:
     void mqttConnected();
     void mqttDiscovery(bool isEnable = true);
 
-    void httpAdd(ESP8266WebServer *server);
-    void httpHtml(ESP8266WebServer *server);
-    String httpGetStatus(ESP8266WebServer *server);
+    void httpAdd(WebServer *server);
+    void httpHtml(WebServer *server);
+    String httpGetStatus(WebServer *server);
 
     void switchRelay(uint8_t ch, bool isOn, bool isSave = true);
 };

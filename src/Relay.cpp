@@ -250,7 +250,7 @@ void Relay::mqttDiscovery(bool isEnable)
 
 #pragma region Http
 
-void Relay::httpAdd(ESP8266WebServer *server)
+void Relay::httpAdd(WebServer *server)
 {
     server->on(F("/relay_do"), std::bind(&Relay::httpDo, this, server));
     server->on(F("/relay_setting"), std::bind(&Relay::httpSetting, this, server));
@@ -263,7 +263,7 @@ void Relay::httpAdd(ESP8266WebServer *server)
 #endif
 }
 
-String Relay::httpGetStatus(ESP8266WebServer *server)
+String Relay::httpGetStatus(WebServer *server)
 {
     String data;
     for (size_t ch = 0; ch < channels; ch++)
@@ -274,7 +274,7 @@ String Relay::httpGetStatus(ESP8266WebServer *server)
     return data.substring(1);
 }
 
-void Relay::httpHtml(ESP8266WebServer *server)
+void Relay::httpHtml(WebServer *server)
 {
     server->sendContent_P(
         PSTR("<table class='gridtable'><thead><tr><th colspan='2'>开关状态</th></tr></thead><tbody>"
@@ -463,7 +463,7 @@ void Relay::httpHtml(ESP8266WebServer *server)
     server->sendContent_P(PSTR("</script>"));
 }
 
-void Relay::httpDo(ESP8266WebServer *server)
+void Relay::httpDo(WebServer *server)
 {
     String c = server->arg(F("c"));
     if (c != F("1") && c != F("2") && c != F("3") && c != F("4"))
@@ -487,7 +487,7 @@ void Relay::httpDo(ESP8266WebServer *server)
 }
 
 #ifdef USE_RCSWITCH
-void Relay::httpRadioReceive(ESP8266WebServer *server)
+void Relay::httpRadioReceive(WebServer *server)
 {
     if (!radioReceive)
     {
@@ -530,7 +530,7 @@ void Relay::httpRadioReceive(ESP8266WebServer *server)
 }
 #endif
 
-void Relay::httpSetting(ESP8266WebServer *server)
+void Relay::httpSetting(WebServer *server)
 {
     config.power_on_state = server->arg(F("power_on_state")).toInt();
     config.report_interval = server->arg(F("report_interval")).toInt();
@@ -588,7 +588,7 @@ void Relay::httpSetting(ESP8266WebServer *server)
     }
 }
 
-void Relay::httpHa(ESP8266WebServer *server)
+void Relay::httpHa(WebServer *server)
 {
     char attachment[100];
     snprintf_P(attachment, sizeof(attachment), PSTR("attachment; filename=%s.yaml"), UID);
@@ -841,7 +841,7 @@ void Relay::cheackButton(uint8_t ch)
 #endif
         if (switchCount[ch] == 20)
         {
-            Wifi::setupWifiManager(false);
+            WifiMgr::setupWifiManager(false);
         }
         switchCount[ch] = 0;
     }

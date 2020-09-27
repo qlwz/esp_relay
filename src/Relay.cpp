@@ -540,13 +540,7 @@ void Relay::httpHtml(WebServer *server)
 
 void Relay::httpDo(WebServer *server)
 {
-    String c = server->arg(F("c"));
-    if (c != F("1") && c != F("2") && c != F("3") && c != F("4"))
-    {
-        server->send_P(200, PSTR("application/json"), PSTR("{\"code\":0,\"msg\":\"参数错误。\"}"));
-        return;
-    }
-    uint8_t ch = c.toInt() - 1;
+    uint8_t ch = server->arg(F("c")).toInt() - 1;
     if (ch > channels)
     {
         server->send_P(200, PSTR("application/json"), PSTR("{\"code\":0,\"msg\":\"继电器数量错误。\"}"));
@@ -1019,21 +1013,7 @@ void Relay::cheackButton(uint8_t ch)
         Led::led(200);
         Debug::AddInfo(PSTR("switchCount %d : %d"), ch + 1, switchCount[ch]);
 
-#ifdef USE_RCSWITCH
-        if (switchCount[ch] == 10 && radioReceive)
-        {
-            radioReceive->study(ch);
-        }
-        else if (switchCount[ch] == 12 && radioReceive)
-        {
-            radioReceive->del(ch);
-        }
-        else if (switchCount[ch] == 16 && radioReceive)
-        {
-            radioReceive->delAll();
-        }
-#endif
-        if (switchCount[ch] == 20)
+        if (switchCount[ch] >= 20)
         {
             WifiMgr::setupWifiManager(false);
         }

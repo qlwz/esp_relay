@@ -350,10 +350,9 @@ void Dimming::httpSetBrightness(WebServer *server)
         relay->config.brightness[ch] = b;
         relay->switchRelay(ch, relay->config.brightness[ch] != 0, true);
     }
-    server->setContentLength(CONTENT_LENGTH_UNKNOWN);
-    server->send_P(200, PSTR("application/json"), PSTR("{\"code\":1,\"msg\":\"操作成功\",\"data\":{"));
-    server->sendContent(relay->httpGetStatus(server));
-    server->sendContent_P(PSTR("}}"));
+
+    snprintf_P(tmpData, sizeof(tmpData), PSTR("{\"code\":1,\"msg\":\"操作成功\",\"data\":{%s}}"), relay->httpGetStatus(server).c_str());
+    server->send_P(200, PSTR("application/json"), tmpData);
 }
 
 IRAM_ATTR void Dimming::loop()

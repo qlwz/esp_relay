@@ -549,10 +549,8 @@ void Relay::httpDo(WebServer *server)
     String str = server->arg(F("do"));
     switchRelay(ch, (str == F("on") ? true : (str == F("off") ? false : !bitRead(lastState, ch))));
 
-    server->setContentLength(CONTENT_LENGTH_UNKNOWN);
-    server->send_P(200, PSTR("application/json"), PSTR("{\"code\":1,\"msg\":\"操作成功\",\"data\":{"));
-    server->sendContent(httpGetStatus(server));
-    server->sendContent_P(PSTR("}}"));
+    snprintf_P(tmpData, sizeof(tmpData), PSTR("{\"code\":1,\"msg\":\"操作成功\",\"data\":{%s}}"), httpGetStatus(server).c_str());
+    server->send_P(200, PSTR("application/json"), tmpData);
 }
 
 #ifdef USE_RCSWITCH
@@ -677,7 +675,6 @@ void Relay::httpHa(WebServer *server)
     char cmndTopic[100];
     strcpy(cmndTopic, Mqtt::getCmndTopic(F("power1")).c_str());
 
-    //server->sendContent_P(PSTR("light:\r\n"));
     for (size_t ch = 0; ch < channels; ch++)
     {
         cmndTopic[strlen(cmndTopic) - 1] = ch + 49;           // 48 + 1 + ch

@@ -20,10 +20,17 @@ message RelayConfigMessage {
 //  uint32 downlight_default = 13 [(nanopb).int_size = IS_8];
 //  uint32 downlight_interval = 14 [(nanopb).int_size = IS_16];
 
+    repeated uint32 brightness = 15 [(nanopb).max_count = 4, (nanopb).fixed_count = true, (nanopb).int_size = IS_8];
+    repeated uint32 color_temp = 16 [(nanopb).max_count = 4, (nanopb).fixed_count = true, (nanopb).int_size = IS_16];
+    repeated uint32 color_index = 17 [(nanopb).max_count = 4, (nanopb).fixed_count = true, (nanopb).int_size = IS_8];
+
     uint32 switch_mode = 18 [(nanopb).int_size = IS_8];
     uint32 power_mode = 19 [(nanopb).int_size = IS_8];
 
     uint32 module_type = 20 [(nanopb).int_size = IS_8];
     uint32 report_interval = 21 [(nanopb).int_size = IS_16];
     uint32 led = 22 [(nanopb).int_size = IS_8];
+    
+    uint32 max_pwm = 23 [(nanopb).int_size = IS_8];
+
 }

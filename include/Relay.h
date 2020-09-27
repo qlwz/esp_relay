@@ -14,9 +14,14 @@ static const uint8_t DEBOUNCED_STATE = 0b00000001;
 static const uint8_t UNSTABLE_STATE = 0b00000010;
 static const uint8_t BUTTON_DEBOUNCE_TIME = 50; // 消抖时间
 
+#ifdef USE_DIMMING
+class Dimming;
+#endif
+
 #ifdef USE_RCSWITCH
 class RadioReceive;
 #endif
+
 class Relay : public Module
 {
 private:
@@ -64,6 +69,10 @@ public:
 
 #ifdef USE_RCSWITCH
     RadioReceive *radioReceive = NULL;
+#endif
+
+#ifdef USE_DIMMING
+    Dimming *dimming = NULL;
 #endif
 
     void init();

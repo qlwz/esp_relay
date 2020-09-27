@@ -6,13 +6,25 @@
 #define MAX_GPIO_PIN 50 // Number of supported GPIO
 
 #define MAX_RELAY_NUM 4
+#define MAX_PWM_NUM 4
+
+#ifndef USE_DIMMING
+#undef MAX_PWM_NUM
 #define MAX_PWM_NUM 0
+#endif
 
 extern uint8_t LED_PIN;
 extern uint8_t RFRECV_PIN;
 extern uint8_t RELAY_PIN[MAX_RELAY_NUM];
 extern uint8_t BOTTON_PIN[MAX_RELAY_NUM + MAX_PWM_NUM];
 extern uint8_t RELAY_LED_PIN[MAX_RELAY_NUM + MAX_PWM_NUM];
+
+#ifdef USE_DIMMING
+extern uint8_t PWM_BRIGHTNESS_PIN[MAX_PWM_NUM];
+extern uint8_t PWM_TEMPERATURE_PIN[MAX_PWM_NUM];
+extern bool PWM_INVERT;
+extern uint8_t ROT_PIN[2];
+#endif
 
 typedef struct MYTMPLT
 {
@@ -27,6 +39,8 @@ enum SupportedModules
     CH2,
     CH3,
     iciness_CH3,
+
+    Yeelight,
 
     MAXMODULE // 占位
 };
@@ -75,6 +89,17 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
         2, 3, 14, 15, 12, // RELAY IO
         3, 3, 9, 10, 2,   // BUTTON IO
         4, 3, 4, 5, 16,   // RELAY LED IO
+
+        99 // END
+    },
+    {
+        "Yeelight",    // 3 Channel (ESP32)
+        1, 1, 16 + 50, // LED IO
+        3, 1, 4,       // BUTTON IO
+        5, 1, 13,      // 433 IO
+
+        6, 1, 5,  // PWM1 IO
+        7, 1, 12, // PWM2 IO
 
         99 // END
     },

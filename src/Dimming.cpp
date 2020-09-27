@@ -330,7 +330,7 @@ void Dimming::RotaryLoop(void)
 }
 #pragma endregion
 
-void Dimming::httpSetBrightness(WebServer *server)
+void Dimming::httpSetBrightness(WEB_SERVER_REQUEST)
 {
     uint8_t ch = server->arg(F("ch")).toInt() - 1;
     if (ch > relay->channels || pwmstartch > ch)
@@ -368,7 +368,7 @@ IRAM_ATTR void Dimming::loop()
     RotaryLoop();
 }
 
-void Dimming::httpHtml(WebServer *server)
+void Dimming::httpHtml(WEB_SERVER_REQUEST)
 {
     for (size_t ch = pwmstartch; ch < relay->channels; ch++)
     {
@@ -387,7 +387,7 @@ void Dimming::httpHtml(WebServer *server)
     }
 }
 
-void Dimming::httpHa(WebServer *server, uint8_t ch)
+void Dimming::httpHa(WEB_SERVER_REQUEST, uint8_t ch)
 {
     char brightnessCmndTopic[100];
     strcpy(brightnessCmndTopic, Mqtt::getCmndTopic(F("brightness1")).c_str());
@@ -422,7 +422,7 @@ void Dimming::httpHa(WebServer *server, uint8_t ch)
     }
 }
 
-String Dimming::httpGetStatus(WebServer *server)
+String Dimming::httpGetStatus(WEB_SERVER_REQUEST)
 {
     String data;
     for (size_t ch = pwmstartch; ch < relay->channels; ch++)

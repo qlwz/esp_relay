@@ -295,26 +295,26 @@ void Relay::mqttDiscovery(bool isEnable)
 
 #pragma region Http
 
-void Relay::httpAdd(WebServer *server)
+void Relay::httpAdd(AsyncWebServer *server)
 {
-    server->on(F("/relay_do"), std::bind(&Relay::httpDo, this, server));
+    server->on(F("/relay_do"), std::bind(&Relay::httpDo, this, WEB_SERVER_REQUEST_PARAMETER));
 #ifdef USE_DIMMING
     if (dimming)
     {
-        server->on(F("/set_brightness"), std::bind(&Dimming::httpSetBrightness, dimming, server));
+        server->on(F("/set_brightness"), std::bind(&Dimming::httpSetBrightness, dimming, WEB_SERVER_REQUEST_PARAMETER));
     }
 #endif
-    server->on(F("/relay_setting"), std::bind(&Relay::httpSetting, this, server));
-    server->on(F("/ha"), std::bind(&Relay::httpHa, this, server));
+    server->on(F("/relay_setting"), std::bind(&Relay::httpSetting, this, WEB_SERVER_REQUEST_PARAMETER));
+    server->on(F("/ha"), std::bind(&Relay::httpHa, this, WEB_SERVER_REQUEST_PARAMETER));
 #ifdef USE_RCSWITCH
-    server->on(F("/rf_do"), std::bind(&Relay::httpRadioReceive, this, server));
+    server->on(F("/rf_do"), std::bind(&Relay::httpRadioReceive, this, WEB_SERVER_REQUEST_PARAMETER));
 #endif
 #ifdef USE_HOMEKIT
-    server->on(F("/homekit"), std::bind(&homekit_http, server));
+    server->on(F("/homekit"), std::bind(&homekit_http, WEB_SERVER_REQUEST_PARAMETER));
 #endif
 }
 
-String Relay::httpGetStatus(WebServer *server)
+String Relay::httpGetStatus(WEB_SERVER_REQUEST)
 {
     String data;
     for (size_t ch = 0; ch < channels; ch++)
@@ -332,7 +332,7 @@ String Relay::httpGetStatus(WebServer *server)
     return data.substring(1);
 }
 
-void Relay::httpHtml(WebServer *server)
+void Relay::httpHtml(WEB_SERVER_REQUEST)
 {
     server->sendContent_P(
         PSTR("<table class='gridtable'><thead><tr><th colspan='2'>开关状态</th></tr></thead><tbody>"
@@ -538,7 +538,7 @@ void Relay::httpHtml(WebServer *server)
     server->sendContent_P(PSTR("</script>"));
 }
 
-void Relay::httpDo(WebServer *server)
+void Relay::httpDo(WEB_SERVER_REQUEST)
 {
     uint8_t ch = server->arg(F("c")).toInt() - 1;
     if (ch > channels)
@@ -554,7 +554,7 @@ void Relay::httpDo(WebServer *server)
 }
 
 #ifdef USE_RCSWITCH
-void Relay::httpRadioReceive(WebServer *server)
+void Relay::httpRadioReceive(WEB_SERVER_REQUEST)
 {
     if (!radioReceive)
     {
@@ -597,7 +597,7 @@ void Relay::httpRadioReceive(WebServer *server)
 }
 #endif
 
-void Relay::httpSetting(WebServer *server)
+void Relay::httpSetting(WEB_SERVER_REQUEST)
 {
     config.power_on_state = server->arg(F("power_on_state")).toInt();
     config.report_interval = server->arg(F("report_interval")).toInt();
@@ -662,14 +662,14 @@ void Relay::httpSetting(WebServer *server)
     }
 }
 
-void Relay::httpHa(WebServer *server)
+void Relay::httpHa(WEB_SERVER_REQUEST)
 {
     char attachment[100];
     snprintf_P(attachment, sizeof(attachment), PSTR("attachment; filename=%s.yaml"), UID);
 
     server->setContentLength(CONTENT_LENGTH_UNKNOWN);
     server->sendHeader(F("Content-Disposition"), attachment);
-    server->send_P(200, PSTR("Content-Type: application/octet-stream"), "light:\r\n");
+    server->send_P(200, PSTR("application/octet-stream"), "light:\r\n");
 
     String availability = Mqtt::getTeleTopic(F("availability"));
     char cmndTopic[100];
@@ -700,6 +700,10 @@ void Relay::httpHa(WebServer *server)
 #endif
         server->sendContent_P(PSTR("\r\n"));
     }
+
+#ifdef USE_ESP_ASYNC_WEBSERVER
+    server->sendContent();
+#endif
 }
 #pragma endregion
 

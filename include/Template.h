@@ -42,6 +42,10 @@ enum SupportedModules
 
     Yeelight,
 
+    PMW4,
+
+    CH2_PWM,
+
     MAXMODULE // 占位
 };
 
@@ -100,6 +104,29 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
 
         6, 1, 5,  // PWM1 IO
         7, 1, 12, // PWM2 IO
+
+        99 // END
+    },
+    {
+        "4 PWM",              // 4 PWM
+        1, 1, 2,              // LED IO
+        3, 4, 36, 39, 34, 35, // BUTTON IO
+        4, 4, 32, 33, 25, 26, // RELAY LED IO
+
+        6, 4, 22 + 50, 21 + 50, 19 + 50, 18 + 50, // PWM1 IO
+
+        99 // END
+    },
+    {
+        "1 Channel & 2 PWM",  // 1 Channel & 2 PWM
+        1, 1, 2,              // LED IO
+        2, 1, 23,             // RELAY IO
+        3, 4, 35, 36, 39, 34, // BUTTON IO
+        4, 4, 32, 33, 25, 26, // RELAY LED IO
+        5, 1, 4,              // 433 IO
+
+        6, 2, 22 + 50, 19 + 50, // PWM1 IO
+        7, 2, 21 + 50, 18 + 50, // PWM2 IO
 
         99 // END
     },

@@ -50,11 +50,11 @@ private:
     void ledTickerHandle();
     bool checkCanLed(bool re = false);
 
-    void httpDo(WebServer *server);
-    void httpSetting(WebServer *server);
-    void httpHa(WebServer *server);
+    void httpDo(WEB_SERVER_REQUEST);
+    void httpSetting(WEB_SERVER_REQUEST);
+    void httpHa(WEB_SERVER_REQUEST);
 #ifdef USE_RCSWITCH
-    void httpRadioReceive(WebServer *server);
+    void httpRadioReceive(WEB_SERVER_REQUEST);
 #endif
 
     void loadModule(uint8_t module);
@@ -93,9 +93,9 @@ public:
     void mqttConnected();
     void mqttDiscovery(bool isEnable = true);
 
-    void httpAdd(WebServer *server);
-    void httpHtml(WebServer *server);
-    String httpGetStatus(WebServer *server);
+    void httpAdd(AsyncWebServer *server);
+    void httpHtml(WEB_SERVER_REQUEST);
+    String httpGetStatus(WEB_SERVER_REQUEST);
 
     void switchRelay(uint8_t ch, bool isOn, bool isSave = true);
 };

@@ -28,7 +28,6 @@ public:
 
     void mqttCallback(char *topic, char *payload, char *cmnd);
 
-    void httpSetBrightness(WebServer *server);
     void init(Relay *_relay);
     void switchRelayPWM(uint8_t ch, bool isOn, bool isSave = true);
     void animate(void);
@@ -40,9 +39,10 @@ public:
 
     void loop();
 
-    void httpHtml(WebServer *server);
-    void httpHa(WebServer *server, uint8_t ch);
-    String httpGetStatus(WebServer *server);
+    void httpSetBrightness(WEB_SERVER_REQUEST);
+    void httpHtml(WEB_SERVER_REQUEST);
+    void httpHa(WEB_SERVER_REQUEST, uint8_t ch);
+    String httpGetStatus(WEB_SERVER_REQUEST);
 };
 
 #endif

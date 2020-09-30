@@ -34,23 +34,25 @@ typedef struct MYTMPLT
 
 enum SupportedModules
 {
+#ifdef ESP8266
     SONOFF_BASIC,
     CH1,
     CH2,
     CH3,
     iciness_CH3,
-
     Yeelight,
 
+#else
     PMW4,
-
     CH2_PWM,
+#endif
 
     MAXMODULE // 占位
 };
 
 // TLV 结构 1：LED  2：RELAY  3：BUTTON  4：RELAY LED  5：433  6：PWM1  7：PWM2  8：ROT  99：结束  IO>50 为反
 const mytmplt Modules[MAXMODULE] PROGMEM = {
+#ifdef ESP8266
     {
         "Sonoff Basic", // Sonoff Basic (ESP8266)
         2, 1, 12,       // RELAY IO
@@ -107,6 +109,7 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
 
         99 // END
     },
+#else
     {
         "4 PWM",              // 4 PWM
         1, 1, 2,              // LED IO
@@ -119,7 +122,7 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
     },
     {
         "1 Channel & 2 PWM",  // 1 Channel & 2 PWM
-        1, 1, 2,              // LED IO
+        1, 1, 2 + 50,         // LED IO
         2, 1, 23,             // RELAY IO
         3, 4, 35, 36, 39, 34, // BUTTON IO
         4, 4, 32, 33, 25, 26, // RELAY LED IO
@@ -130,6 +133,7 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
 
         99 // END
     },
+#endif
 };
 
 #endif

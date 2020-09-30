@@ -197,7 +197,7 @@ void Relay::readConfig()
 
     if (config.module_type >= MAXMODULE)
     {
-        config.module_type = SONOFF_BASIC;
+        config.module_type = 0;
     }
 }
 
@@ -205,7 +205,7 @@ void Relay::resetConfig()
 {
     Debug::AddInfo(PSTR("moduleResetConfig . . . OK"));
     memset(&config, 0, sizeof(RelayConfigMessage));
-    config.module_type = SupportedModules::SONOFF_BASIC;
+    config.module_type = 0;
     config.led_light = 50;
     config.led_time = 3;
 }
@@ -890,18 +890,16 @@ void Relay::cheackButton(uint8_t ch)
             {
                 if (!bitRead(dimmingState[ch - dimming->pwmstartch], 0))
                 {
-                    config.brightness[ch]++;
-                    if (config.brightness[ch] >= 100)
+                    if (config.brightness[ch] < 100)
                     {
-                        bitSet(dimmingState[ch - dimming->pwmstartch], 0);
+                        config.brightness[ch]++;
                     }
                 }
                 else
                 {
-                    config.brightness[ch]--;
-                    if (config.brightness[ch] <= 10)
+                    if (config.brightness[ch] > 10)
                     {
-                        bitClear(dimmingState[ch - dimming->pwmstartch], 0);
+                        config.brightness[ch]--;
                     }
                 }
                 //Debug::AddInfo(PSTR("brightness %d : %d"), ch + 1, config.brightness[ch]);
@@ -948,6 +946,15 @@ void Relay::cheackButton(uint8_t ch)
                     }
                     else
                     {
+                        if (config.brightness[ch] >= 100) // 切换调光模式
+                        {
+                            bitSet(dimmingState[ch - dimming->pwmstartch], 0);
+                        }
+                        if (config.brightness[ch] <= 10)
+                        {
+                            bitClear(dimmingState[ch - dimming->pwmstartch], 0);
+                        }
+
                         lastTime[ch] = millis() + 400; // 首次500毫秒才进入调光模式
                         //bitClear(dimmingState[ch - dimming->pwmstartch], 0); // 每次进入亮度增加模式
                         bitSet(dimmingState[ch - dimming->pwmstartch], 1);   // 调光模式
@@ -956,6 +963,10 @@ void Relay::cheackButton(uint8_t ch)
                 }
                 else
                 {
+                    if (bitRead(dimmingState[ch - dimming->pwmstartch], 2)) // 进入调光模式就进行切换
+                    {
+                        bitWrite(dimmingState[ch - dimming->pwmstartch], 0, !bitRead(dimmingState[ch - dimming->pwmstartch], 0));
+                    }
                     if (bitRead(dimmingState[ch - dimming->pwmstartch], 1) && !bitRead(dimmingState[ch - dimming->pwmstartch], 2))
                     {
                         switchRelay(ch, false, true);

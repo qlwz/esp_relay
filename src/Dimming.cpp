@@ -61,7 +61,6 @@ void Dimming::init(Relay *_relay)
 
 void Dimming::loadPWM(uint8_t ch, uint8_t pin)
 {
-
     bool pwm_invert = pin > 50;
     uint8_t pin2 = pwm_invert ? pin - 50 : pin;
     pinMode(pin2, OUTPUT);
@@ -119,6 +118,10 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
         {
             target_color[MAX_PWM_NUM * 2 - 1 - pwmch] = 0;
         }
+        if (!pwmTicker.active())
+        {
+            pwmTicker.attach_ms(10, []() { ((Relay *)module)->dimming->animate(); });
+        }
         return;
     }
 
@@ -149,7 +152,7 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
         target_color[pwmch] = (uint16_t)((float)(icold / dimmer) * (float)(pwm_range / 255));
         target_color[MAX_PWM_NUM * 2 - 1 - pwmch] = (uint16_t)((float)(iwarm / dimmer) * (float)(pwm_range / 255));
 
-        Debug::AddInfo(PSTR("Relay %d . . . Color:%d %d   Brightness:%d %d"), ch + 1, ct, icold, brightness, iwarm);
+        Debug::AddInfo(PSTR("Relay %d . . . Color:%d %d  %d  Brightness:%d %d %d"), ch + 1, ct, icold, target_color[MAX_PWM_NUM * 2 - 1 - pwmch], brightness, iwarm, target_color[pwmch]);
     }
     else
     {
@@ -157,48 +160,64 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
         target_color[pwmch] = 255 / dimmer * (pwm_range / 255);
         Debug::AddInfo(PSTR("Relay %d %d. . . Brightness:%d %d"), ch + 1, pwmch, brightness, target_color[pwmch]);
     }
+    if (!pwmTicker.active())
+    {
+        pwmTicker.attach_ms(10, []() { ((Relay *)module)->dimming->animate(); });
+    }
 }
 
 IRAM_ATTR void Dimming::animate(void)
 {
     for (uint8_t i = 0; i < (sizeof(current_color) / sizeof(current_color[0])); i++)
     {
-        if (current_color[i] != target_color[i])
+        if (current_color[i] == target_color[i])
         {
-            if (current_color[i] < target_color[i])
-            {
-                current_color[i] = current_color[i] + PWM_SHIFT > target_color[i] ? target_color[i] : current_color[i] + PWM_SHIFT;
-            }
-            if (current_color[i] > target_color[i])
-            {
-                if (current_color[i] < (target_color[i] == 0 ? PWM_SHIFT * 2 : PWM_SHIFT))
-                {
-                    current_color[i] = 0;
-                }
-                else
-                {
-                    current_color[i] = current_color[i] - (target_color[i] == 0 ? PWM_SHIFT * 2 : PWM_SHIFT) < target_color[i] ? target_color[i] : current_color[i] - (target_color[i] == 0 ? PWM_SHIFT * 2 : PWM_SHIFT);
-                }
-            }
+            continue;
+        }
 
-            //Debug::AddInfo(PSTR("a%d %d %d"), i, target_color[i], current_color[i]);
-
-#ifdef ESP8266
-            if (i < MAX_PWM_NUM)
+        if (current_color[i] < target_color[i])
+        {
+            current_color[i] = current_color[i] + PWM_SHIFT > target_color[i] ? target_color[i] : current_color[i] + PWM_SHIFT;
+        }
+        else if (current_color[i] > target_color[i])
+        {
+            if (current_color[i] < (target_color[i] == 0 ? PWM_SHIFT * 2 : PWM_SHIFT))
             {
-                analogWrite(PWM_BRIGHTNESS_PIN[i] > 50 ? PWM_BRIGHTNESS_PIN[i] - 50 : PWM_BRIGHTNESS_PIN[i], PWM_BRIGHTNESS_PIN[i] > 50 ? PWM_RANGE - current_color[i] : current_color[i]);
+                current_color[i] = 0;
             }
             else
             {
-                uint8_t ch = MAX_PWM_NUM * 2 - 1 - i;
-                analogWrite(PWM_TEMPERATURE_PIN[ch] > 50 ? PWM_TEMPERATURE_PIN[ch] - 50 : PWM_TEMPERATURE_PIN[ch], PWM_TEMPERATURE_PIN[ch] > 50 ? PWM_RANGE - current_color[i] : current_color[i]);
+                current_color[i] = current_color[i] - (target_color[i] == 0 ? PWM_SHIFT * 2 : PWM_SHIFT) < target_color[i] ? target_color[i] : current_color[i] - (target_color[i] == 0 ? PWM_SHIFT * 2 : PWM_SHIFT);
             }
+        }
+
+        //Debug::AddInfo(PSTR("a%d %d %d"), i, target_color[i], current_color[i]);
+
+#ifdef ESP8266
+        if (i < MAX_PWM_NUM)
+        {
+            analogWrite(PWM_BRIGHTNESS_PIN[i] > 50 ? PWM_BRIGHTNESS_PIN[i] - 50 : PWM_BRIGHTNESS_PIN[i], PWM_BRIGHTNESS_PIN[i] > 50 ? PWM_RANGE - current_color[i] : current_color[i]);
+        }
+        else
+        {
+            uint8_t ch = MAX_PWM_NUM * 2 - 1 - i;
+            analogWrite(PWM_TEMPERATURE_PIN[ch] > 50 ? PWM_TEMPERATURE_PIN[ch] - 50 : PWM_TEMPERATURE_PIN[ch], PWM_TEMPERATURE_PIN[ch] > 50 ? PWM_RANGE - current_color[i] : current_color[i]);
+        }
 #else
-            ledcWrite(i, current_color[i]);
+        ledcWrite(i, current_color[i]);
 #endif
+    }
+
+    for (uint8_t i = 0; i < (sizeof(current_color) / sizeof(current_color[0])); i++)
+    {
+        if (current_color[i] != target_color[i])
+        {
+            return;
         }
     }
+    pwmTicker.detach();
 }
+
 #pragma region 编码器
 IRAM_ATTR void update_rotary(void)
 {
@@ -357,14 +376,6 @@ void Dimming::httpSetBrightness(WEB_SERVER_REQUEST)
 
 IRAM_ATTR void Dimming::loop()
 {
-    static uint32_t lastTime = 0;
-    uint32_t now = millis();
-
-    if (now - lastTime >= 10)
-    {
-        lastTime = now;
-        animate();
-    }
     RotaryLoop();
 }
 

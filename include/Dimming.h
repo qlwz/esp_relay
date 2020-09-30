@@ -20,6 +20,7 @@ protected:
     uint16_t target_color[MAX_PWM_NUM * 2] = {0};
     uint16_t current_color[MAX_PWM_NUM * 2] = {0};
     bool isFirst = true;
+    Ticker pwmTicker;
 
 public:
     uint8_t pwmstartch = 99;

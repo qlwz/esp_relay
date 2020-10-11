@@ -123,8 +123,7 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
     {
         "1 Channel & 2 PWM",  // 1 Channel & 2 PWM
         1, 1, 2 + 50,         // LED IO
-        2, 1, 23,             // RELAY IO
-        3, 4, 35, 36, 39, 34, // BUTTON IO
+        3, 4, 36, 39, 34, 35, // BUTTON IO
         4, 4, 32, 33, 25, 26, // RELAY LED IO
         5, 1, 4,              // 433 IO
 

@@ -51,7 +51,7 @@ void RadioReceive::loop()
     unsigned long value = mySwitch->getReceivedValue();
     //Debug::AddError(PSTR("315Mhz: %d"), value);
     mySwitch->resetAvailable();
-    if (lastVaue == value && millis() - lastTime < 300)
+    if (lastVaue == value && millis() - lastTime < 1000)
     {
         return;
     }
@@ -89,7 +89,7 @@ void RadioReceive::loop()
         }
         if (!isOk)
         {
-            Debug::AddInfo(PSTR("Receive %d no channel"), value);
+            //Debug::AddInfo(PSTR("Receive %d no channel"), value);
         }
         Led::led(200);
     }

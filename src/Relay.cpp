@@ -25,22 +25,9 @@ uint8_t ROT_PIN[2];
 
 String Relay::getModuleCNName()
 {
-#ifdef USE_DIMMING
-    if (dimming)
-    {
-        if (dimming->pwmstartch > 0)
-        {
-            return String(dimming->pwmstartch) + F("路开关 + ") + String(channels - dimming->pwmstartch) + F("路PWM模块");
-        }
-        return String(channels - dimming->pwmstartch) + F("路PWM模块");
-    }
-    else
-    {
-#endif
-        return String(channels) + F("路开关模块");
-#ifdef USE_DIMMING
-    }
-#endif
+    mytmplt m;
+    memcpy_P(&m, &Modules[config.module_type], sizeof(m));
+    return String(m.name);
 }
 
 void Relay::init()
@@ -208,6 +195,22 @@ void Relay::resetConfig()
     config.module_type = 0;
     config.led_light = 50;
     config.led_time = 3;
+
+    config.max_pwm = 100;
+
+#ifdef WIFI_SSID
+#ifdef ESP8266
+    config.module_type = Yeelight;
+#else
+    config.module_type = CH2_PWM;
+#endif
+    globalConfig.debug.type = globalConfig.debug.type | 4;
+    strcpy(globalConfig.uid, UID);
+    config.switch_mode = 1;
+    config.led_type = 2;
+    config.led = 2;
+    config.report_interval = 60 * 5;
+#endif
 }
 
 void Relay::saveConfig(bool isEverySecond)
@@ -381,11 +384,14 @@ void Relay::httpHtml(WEB_SERVER_REQUEST)
              "<label class='bui-radios-label'><input type='radio' name='power_on_state' value='3'/><i class='bui-radios'></i> 开关通电时保持断电前状态</label>"
              "</td></tr>"));
 
-    server->sendContent_P(
-        PSTR("<tr><td>开关模式</td><td>"
-             "<label class='bui-radios-label'><input type='radio' name='power_mode' value='0'/><i class='bui-radios'></i> 自锁</label>&nbsp;&nbsp;&nbsp;&nbsp;"
-             "<label class='bui-radios-label'><input type='radio' name='power_mode' value='1'/><i class='bui-radios'></i> 互锁</label>"
-             "</td></tr>"));
+    if (channels > 1)
+    {
+        server->sendContent_P(
+            PSTR("<tr><td>开关模式</td><td>"
+                 "<label class='bui-radios-label'><input type='radio' name='power_mode' value='0'/><i class='bui-radios'></i> 自锁</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+                 "<label class='bui-radios-label'><input type='radio' name='power_mode' value='1'/><i class='bui-radios'></i> 互锁</label>"
+                 "</td></tr>"));
+    }
 
     server->sendContent_P(
         PSTR("<tr><td>开关类型</td><td>"
@@ -886,7 +892,7 @@ void Relay::cheackButton(uint8_t ch)
 #ifdef USE_DIMMING
         if (dimming && ch >= dimming->pwmstartch && !currentState && bitRead(dimmingState[ch - dimming->pwmstartch], 1)) // 如果低电平 并且进入调光模式
         {
-            if (millis() > lastTime[ch] + 100)
+            if (millis() - 100 > lastTime[ch])
             {
                 if (!bitRead(dimmingState[ch - dimming->pwmstartch], 0))
                 {
@@ -974,6 +980,7 @@ void Relay::cheackButton(uint8_t ch)
                         lastTime[ch] = millis();
                     }
                     bitClear(dimmingState[ch - dimming->pwmstartch], 1);
+                    bitClear(dimmingState[ch - dimming->pwmstartch], 2);
                 }
             }
             else if (dimming && ch >= dimming->pwmstartch && ROT_PIN[0] != 99)

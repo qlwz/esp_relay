@@ -57,6 +57,12 @@ void Dimming::init(Relay *_relay)
         relay->config.max_pwm = 100;
     }
     pwm_range = PWM_RANGE * relay->config.max_pwm / 100;
+
+#ifdef WIFI_SSID
+    pinMode(23, OUTPUT);
+    pinMode(13, OUTPUT);
+    pinMode(27, OUTPUT);
+#endif
 }
 
 void Dimming::loadPWM(uint8_t ch, uint8_t pin)
@@ -124,6 +130,12 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
         }
         return;
     }
+
+#ifdef WIFI_SSID
+    digitalWrite(23, 1);
+    digitalWrite(13, 1);
+    digitalWrite(27, 1);
+#endif
 
     uint8_t brightness = relay->config.brightness[ch];
     if (brightness == 0)
@@ -216,6 +228,19 @@ IRAM_ATTR void Dimming::animate(void)
         }
     }
     pwmTicker.detach();
+
+#ifdef WIFI_SSID
+    for (uint8_t i = 0; i < (sizeof(current_color) / sizeof(current_color[0])); i++)
+    {
+        if (current_color[i] != 0)
+        {
+            return;
+        }
+    }
+    digitalWrite(23, 0);
+    digitalWrite(13, 0);
+    digitalWrite(27, 0);
+#endif
 }
 
 #pragma region 编码器

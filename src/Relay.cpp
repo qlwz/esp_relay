@@ -210,6 +210,8 @@ void Relay::resetConfig()
     config.led_type = 2;
     config.led = 2;
     config.report_interval = 60 * 5;
+    config.led_start = 1800;
+    config.led_end = 2300;
 #endif
 }
 
@@ -269,7 +271,7 @@ void Relay::mqttDiscovery(bool isEnable)
         {
             cmndTopic[strlen(cmndTopic) - 1] = ch + 49;           // 48 + 1 + ch
             powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
-            sprintf(message, PSTR("{\"name\":\"%s_%d\","
+            sprintf(message, PSTR("{\"name\":\"%s_ch%d\","
                                   "\"cmd_t\":\"%s\","
                                   "\"stat_t\":\"%s\","
                                   "\"pl_off\":\"off\","
@@ -281,6 +283,12 @@ void Relay::mqttDiscovery(bool isEnable)
                     cmndTopic,
                     powerStatTopic,
                     availability.c_str());
+#ifdef USE_DIMMING
+            if (dimming && ch >= dimming->pwmstartch)
+            {
+                dimming->mqttDiscovery(message, ch);
+            }
+#endif
             //Debug::AddInfo(PSTR("discovery: %s - %s"), topic, message);
             Mqtt::publish(topic, message, true);
         }
@@ -688,7 +696,7 @@ void Relay::httpHa(WEB_SERVER_REQUEST)
 
         snprintf_P(tmpData, sizeof(tmpData),
                    PSTR("  - platform: mqtt\r\n"
-                        "    name: \"%s_l%d\"\r\n"
+                        "    name: \"%s_ch%d\"\r\n"
                         "    state_topic: \"%s\"\r\n"
                         "    command_topic: \"%s\"\r\n"
                         "    payload_on: \"on\"\r\n"

@@ -430,11 +430,6 @@ void Dimming::httpHa(WEB_SERVER_REQUEST, uint8_t ch)
     char brightnessStatTopic[100];
     strcpy(brightnessStatTopic, Mqtt::getStatTopic(F("brightness1")).c_str());
 
-    char color_tempCmndTopic[100];
-    strcpy(color_tempCmndTopic, Mqtt::getCmndTopic(F("color_temp1")).c_str());
-    char color_tempStatTopic[100];
-    strcpy(color_tempStatTopic, Mqtt::getStatTopic(F("color_temp1")).c_str());
-
     // 亮度
     brightnessCmndTopic[strlen(brightnessCmndTopic) - 1] = ch + 49; // 48 + 1 + ch
     brightnessStatTopic[strlen(brightnessStatTopic) - 1] = ch + 49; // 48 + 1 + ch
@@ -448,6 +443,11 @@ void Dimming::httpHa(WEB_SERVER_REQUEST, uint8_t ch)
     // 色温
     if (PWM_TEMPERATURE_PIN[ch - pwmstartch] != 99)
     {
+        char color_tempCmndTopic[100];
+        strcpy(color_tempCmndTopic, Mqtt::getCmndTopic(F("color_temp1")).c_str());
+        char color_tempStatTopic[100];
+        strcpy(color_tempStatTopic, Mqtt::getStatTopic(F("color_temp1")).c_str());
+
         color_tempCmndTopic[strlen(color_tempCmndTopic) - 1] = ch + 49; // 48 + 1 + ch
         color_tempStatTopic[strlen(color_tempStatTopic) - 1] = ch + 49; // 48 + 1 + ch
         snprintf_P(tmpData, sizeof(tmpData),
@@ -455,6 +455,44 @@ void Dimming::httpHa(WEB_SERVER_REQUEST, uint8_t ch)
                         "    color_temp_command_topic: \"%s\"\r\n"),
                    color_tempStatTopic, color_tempCmndTopic);
         server->sendContent_P(tmpData);
+    }
+}
+
+void Dimming::mqttDiscovery(char *message, uint8_t ch)
+{
+    char newout[200];
+    // 亮度
+    char brightnessCmndTopic[100];
+    strcpy(brightnessCmndTopic, Mqtt::getCmndTopic(F("brightness1")).c_str());
+    char brightnessStatTopic[100];
+    strcpy(brightnessStatTopic, Mqtt::getStatTopic(F("brightness1")).c_str());
+    brightnessCmndTopic[strlen(brightnessCmndTopic) - 1] = ch + 49; // 48 + 1 + ch
+    brightnessStatTopic[strlen(brightnessStatTopic) - 1] = ch + 49; // 48 + 1 + ch
+    sprintf(newout, PSTR("\"bri_stat_t\":\"%s\","
+                         "\"bri_cmd_t\":\"%s\","
+                         "\"bri_scl\":100}"),
+            brightnessStatTopic, brightnessCmndTopic);
+
+    message[strlen(message) - 1] = ',';
+    strcat(message, newout);
+
+    // 色温
+    if (PWM_TEMPERATURE_PIN[ch - pwmstartch] != 99)
+    {
+        char color_tempCmndTopic[100];
+        strcpy(color_tempCmndTopic, Mqtt::getCmndTopic(F("color_temp1")).c_str());
+        char color_tempStatTopic[100];
+        strcpy(color_tempStatTopic, Mqtt::getStatTopic(F("color_temp1")).c_str());
+
+        color_tempCmndTopic[strlen(color_tempCmndTopic) - 1] = ch + 49; // 48 + 1 + ch
+        color_tempStatTopic[strlen(color_tempStatTopic) - 1] = ch + 49; // 48 + 1 + ch
+
+        sprintf(newout, PSTR("\"clr_temp_stat_t\":\"%s\","
+                             "\"clr_temp_cmd_t\":\"%s\"}"),
+                color_tempStatTopic, color_tempCmndTopic);
+
+        message[strlen(message) - 1] = ',';
+        strcat(message, newout);
     }
 }
 

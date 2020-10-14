@@ -43,6 +43,7 @@ public:
     void httpSetBrightness(WEB_SERVER_REQUEST);
     void httpHtml(WEB_SERVER_REQUEST);
     void httpHa(WEB_SERVER_REQUEST, uint8_t ch);
+    void mqttDiscovery(char *message, uint8_t ch);
     String httpGetStatus(WEB_SERVER_REQUEST);
 };
 

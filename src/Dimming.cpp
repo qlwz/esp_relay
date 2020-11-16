@@ -46,9 +46,9 @@ void Dimming::init(Relay *_relay)
         }
     }
 
-#ifdef ESP866
-    analogWriteRange(1023);
-    analogWriteFreq(1600);
+#ifdef ESP8266
+    analogWriteRange(PWM_RANGE);
+    analogWriteFreq(3072);
 #endif
 
     RotaryInit();
@@ -59,9 +59,14 @@ void Dimming::init(Relay *_relay)
     pwm_range = PWM_RANGE * relay->config.max_pwm / 100;
 
 #ifdef WIFI_SSID
-    pinMode(23, OUTPUT);
+#ifdef ESP32
+    if (relay->config.module_type != CH1_PWM1)
+    {
+        pinMode(23, OUTPUT);
+    }
     pinMode(13, OUTPUT);
     pinMode(27, OUTPUT);
+#endif
 #endif
 }
 
@@ -72,7 +77,7 @@ void Dimming::loadPWM(uint8_t ch, uint8_t pin)
     pinMode(pin2, OUTPUT);
 #ifdef ESP32
     //19531
-    ledcSetup(ch, 19531, 12); // 12 kHz PWM, 8-bit resolutionXS
+    ledcSetup(ch, relay->config.module_type == Yeelight ? 3072 : 19531, 12); // 12 kHz PWM, 8-bit resolutionXS
     pinMatrixOutAttach(pin2, LEDC_HS_SIG_OUT0_IDX + ch, pwm_invert, false);
     pwm_invert = false;
 #endif
@@ -132,9 +137,14 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
     }
 
 #ifdef WIFI_SSID
-    digitalWrite(23, 1);
+#ifdef ESP32
+    if (relay->config.module_type != CH1_PWM1)
+    {
+        digitalWrite(23, 1);
+    }
     digitalWrite(13, 1);
     digitalWrite(27, 1);
+#endif
 #endif
 
     uint8_t brightness = relay->config.brightness[ch];
@@ -163,6 +173,32 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
 
         target_color[pwmch] = (uint16_t)((float)(icold / dimmer) * (float)(pwm_range / 255));
         target_color[MAX_PWM_NUM * 2 - 1 - pwmch] = (uint16_t)((float)(iwarm / dimmer) * (float)(pwm_range / 255));
+
+        if (brightness == 100)
+        {
+            if (target_color[pwmch] > PWM_RANGE - 50)
+            {
+                target_color[pwmch] = PWM_RANGE;
+            }
+            if (target_color[MAX_PWM_NUM * 2 - 1 - pwmch] > PWM_RANGE - 50)
+            {
+                target_color[MAX_PWM_NUM * 2 - 1 - pwmch] = PWM_RANGE;
+            }
+        }
+
+#ifdef ESP8266
+        if (relay->config.module_type == Yeelight)
+        {
+            if (current_color[pwmch] < 102)
+            {
+                current_color[pwmch] = 102;
+            }
+            if (current_color[MAX_PWM_NUM * 2 - 1 - pwmch] < 102)
+            {
+                current_color[MAX_PWM_NUM * 2 - 1 - pwmch] = 102;
+            }
+        }
+#endif
 
         Debug::AddInfo(PSTR("Relay %d . . . Color:%d %d  %d  Brightness:%d %d %d"), ch + 1, ct, icold, target_color[MAX_PWM_NUM * 2 - 1 - pwmch], brightness, iwarm, target_color[pwmch]);
     }
@@ -237,9 +273,14 @@ IRAM_ATTR void Dimming::animate(void)
             return;
         }
     }
-    digitalWrite(23, 0);
+#ifdef ESP32
+    if (relay->config.module_type != CH1_PWM1)
+    {
+        digitalWrite(23, 0);
+    }
     digitalWrite(13, 0);
     digitalWrite(27, 0);
+#endif
 #endif
 }
 
@@ -374,7 +415,7 @@ void Dimming::RotaryLoop(void)
 }
 #pragma endregion
 
-void Dimming::httpSetBrightness(WEB_SERVER_REQUEST)
+void Dimming::httpSetBrightness(WebServer *server)
 {
     uint8_t ch = server->arg(F("ch")).toInt() - 1;
     if (ch > relay->channels || pwmstartch > ch)
@@ -404,7 +445,7 @@ IRAM_ATTR void Dimming::loop()
     RotaryLoop();
 }
 
-void Dimming::httpHtml(WEB_SERVER_REQUEST)
+void Dimming::httpHtml(WebServer *server)
 {
     for (size_t ch = pwmstartch; ch < relay->channels; ch++)
     {
@@ -423,7 +464,7 @@ void Dimming::httpHtml(WEB_SERVER_REQUEST)
     }
 }
 
-void Dimming::httpHa(WEB_SERVER_REQUEST, uint8_t ch)
+void Dimming::httpHa(WebServer *server, uint8_t ch)
 {
     char brightnessCmndTopic[100];
     strcpy(brightnessCmndTopic, Mqtt::getCmndTopic(F("brightness1")).c_str());
@@ -496,7 +537,7 @@ void Dimming::mqttDiscovery(char *message, uint8_t ch)
     }
 }
 
-String Dimming::httpGetStatus(WEB_SERVER_REQUEST)
+String Dimming::httpGetStatus(WebServer *server)
 {
     String data;
     for (size_t ch = pwmstartch; ch < relay->channels; ch++)

@@ -200,18 +200,23 @@ void Relay::resetConfig()
 
 #ifdef WIFI_SSID
 #ifdef ESP8266
+#ifdef USE_DIMMING
     config.module_type = Yeelight;
+#else
+    config.module_type = CH1;
+#endif
 #else
     config.module_type = CH2_PWM;
 #endif
+    globalConfig.mqtt.interval = 60 * 60;
     globalConfig.debug.type = globalConfig.debug.type | 4;
-    strcpy(globalConfig.uid, UID);
+
     config.switch_mode = 1;
     config.led_type = 2;
-    config.led = 2;
-    config.report_interval = 60 * 5;
     config.led_start = 1800;
     config.led_end = 2300;
+    config.led = 2;
+    config.report_interval = 60 * 5;
 #endif
 }
 
@@ -306,26 +311,26 @@ void Relay::mqttDiscovery(bool isEnable)
 
 #pragma region Http
 
-void Relay::httpAdd(AsyncWebServer *server)
+void Relay::httpAdd(WebServer *server)
 {
-    server->on(F("/relay_do"), std::bind(&Relay::httpDo, this, WEB_SERVER_REQUEST_PARAMETER));
+    server->on(F("/relay_do"), std::bind(&Relay::httpDo, this, server));
 #ifdef USE_DIMMING
     if (dimming)
     {
-        server->on(F("/set_brightness"), std::bind(&Dimming::httpSetBrightness, dimming, WEB_SERVER_REQUEST_PARAMETER));
+        server->on(F("/set_brightness"), std::bind(&Dimming::httpSetBrightness, dimming, server));
     }
 #endif
-    server->on(F("/relay_setting"), std::bind(&Relay::httpSetting, this, WEB_SERVER_REQUEST_PARAMETER));
-    server->on(F("/ha"), std::bind(&Relay::httpHa, this, WEB_SERVER_REQUEST_PARAMETER));
+    server->on(F("/relay_setting"), std::bind(&Relay::httpSetting, this, server));
+    server->on(F("/ha"), std::bind(&Relay::httpHa, this, server));
 #ifdef USE_RCSWITCH
-    server->on(F("/rf_do"), std::bind(&Relay::httpRadioReceive, this, WEB_SERVER_REQUEST_PARAMETER));
+    server->on(F("/rf_do"), std::bind(&Relay::httpRadioReceive, this, server));
 #endif
 #ifdef USE_HOMEKIT
-    server->on(F("/homekit"), std::bind(&homekit_http, WEB_SERVER_REQUEST_PARAMETER));
+    server->on(F("/homekit"), std::bind(&homekit_http, server));
 #endif
 }
 
-String Relay::httpGetStatus(WEB_SERVER_REQUEST)
+String Relay::httpGetStatus(WebServer *server)
 {
     String data;
     for (size_t ch = 0; ch < channels; ch++)
@@ -343,7 +348,7 @@ String Relay::httpGetStatus(WEB_SERVER_REQUEST)
     return data.substring(1);
 }
 
-void Relay::httpHtml(WEB_SERVER_REQUEST)
+void Relay::httpHtml(WebServer *server)
 {
     server->sendContent_P(
         PSTR("<table class='gridtable'><thead><tr><th colspan='2'>开关状态</th></tr></thead><tbody>"
@@ -397,7 +402,8 @@ void Relay::httpHtml(WEB_SERVER_REQUEST)
         server->sendContent_P(
             PSTR("<tr><td>开关模式</td><td>"
                  "<label class='bui-radios-label'><input type='radio' name='power_mode' value='0'/><i class='bui-radios'></i> 自锁</label>&nbsp;&nbsp;&nbsp;&nbsp;"
-                 "<label class='bui-radios-label'><input type='radio' name='power_mode' value='1'/><i class='bui-radios'></i> 互锁</label>"
+                 "<label class='bui-radios-label'><input type='radio' name='power_mode' value='1'/><i class='bui-radios'></i> 互锁</label>&nbsp;&nbsp;&nbsp;&nbsp;"
+                 "<label class='bui-radios-label'><input type='radio' name='power_mode' value='2'/><i class='bui-radios'></i> 点动</label>&nbsp;&nbsp;&nbsp;&nbsp;"
                  "</td></tr>"));
     }
 
@@ -552,7 +558,7 @@ void Relay::httpHtml(WEB_SERVER_REQUEST)
     server->sendContent_P(PSTR("</script>"));
 }
 
-void Relay::httpDo(WEB_SERVER_REQUEST)
+void Relay::httpDo(WebServer *server)
 {
     uint8_t ch = server->arg(F("c")).toInt() - 1;
     if (ch > channels)
@@ -568,7 +574,7 @@ void Relay::httpDo(WEB_SERVER_REQUEST)
 }
 
 #ifdef USE_RCSWITCH
-void Relay::httpRadioReceive(WEB_SERVER_REQUEST)
+void Relay::httpRadioReceive(WebServer *server)
 {
     if (!radioReceive)
     {
@@ -611,7 +617,7 @@ void Relay::httpRadioReceive(WEB_SERVER_REQUEST)
 }
 #endif
 
-void Relay::httpSetting(WEB_SERVER_REQUEST)
+void Relay::httpSetting(WebServer *server)
 {
     config.power_on_state = server->arg(F("power_on_state")).toInt();
     config.report_interval = server->arg(F("report_interval")).toInt();
@@ -676,7 +682,7 @@ void Relay::httpSetting(WEB_SERVER_REQUEST)
     }
 }
 
-void Relay::httpHa(WEB_SERVER_REQUEST)
+void Relay::httpHa(WebServer *server)
 {
     char attachment[100];
     snprintf_P(attachment, sizeof(attachment), PSTR("attachment; filename=%s.yaml"), UID);
@@ -714,10 +720,6 @@ void Relay::httpHa(WEB_SERVER_REQUEST)
 #endif
         server->sendContent_P(PSTR("\r\n"));
     }
-
-#ifdef USE_ESP_ASYNC_WEBSERVER
-    server->sendContent();
-#endif
 }
 #pragma endregion
 
@@ -881,6 +883,12 @@ void Relay::switchRelay(uint8_t ch, bool isOn, bool isSave)
     {
         led(ch, isOn);
     }
+
+    if (isOn && config.power_mode == 2)
+    {
+        delay(100);
+        switchRelay(ch, !isOn, isSave);
+    }
 }
 
 void Relay::cheackButton(uint8_t ch)
@@ -969,7 +977,7 @@ void Relay::cheackButton(uint8_t ch)
                             bitClear(dimmingState[ch - dimming->pwmstartch], 0);
                         }
 
-                        lastTime[ch] = millis() + 400; // 首次500毫秒才进入调光模式
+                        lastTime[ch] = millis() + 900; // 首次1000毫秒才进入调光模式
                         //bitClear(dimmingState[ch - dimming->pwmstartch], 0); // 每次进入亮度增加模式
                         bitSet(dimmingState[ch - dimming->pwmstartch], 1);   // 调光模式
                         bitClear(dimmingState[ch - dimming->pwmstartch], 2); // 重置为未调光状态

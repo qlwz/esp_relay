@@ -45,6 +45,8 @@ enum SupportedModules
 #else
     PMW4,
     CH2_PWM,
+    CH1_PWM1,
+    Yeelight,
 #endif
 
     MAXMODULE // 占位
@@ -61,7 +63,7 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
         99 // END
     },
     {
-        "1 Channel",   // 1 Channel (ESP8285)
+        "1路开关",   // 1 Channel (ESP8285)
         1, 1, 16 + 50, // LED IO
         2, 1, 14,      // RELAY IO
         3, 1, 4,       // BUTTON IO
@@ -71,7 +73,7 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
         99 // END
     },
     {
-        "2 Channel",   // 2 Channel (ESP8285)
+        "2路开关",   // 2 Channel (ESP8285)
         1, 1, 16 + 50, // LED IO
         2, 2, 14, 12,  // RELAY IO
         3, 2, 4, 9,    // BUTTON IO
@@ -81,7 +83,7 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
         99 // END
     },
     {
-        "3 Channel",     // 3 Channel (ESP8285)
+        "3路开关",     // 3 Channel (ESP8285)
         1, 1, 16 + 50,   // LED IO
         2, 3, 14, 12, 5, // RELAY IO
         3, 3, 4, 9, 10,  // BUTTON IO
@@ -111,7 +113,7 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
     },
 #else
     {
-        "4 PWM",              // 4 PWM
+        "4路调光",              // 4 PWM
         1, 1, 2,              // LED IO
         3, 4, 36, 39, 34, 35, // BUTTON IO
         4, 4, 32, 33, 25, 26, // RELAY LED IO
@@ -121,7 +123,7 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
         99 // END
     },
     {
-        "1 Channel & 2 PWM",  // 1 Channel & 2 PWM
+        "2路双色",  // 1 Channel & 2 PWM
         1, 1, 2 + 50,         // LED IO
         3, 4, 36, 39, 34, 35, // BUTTON IO
         4, 4, 32, 33, 25, 26, // RELAY LED IO
@@ -129,6 +131,31 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
 
         6, 2, 22 + 50, 19 + 50, // PWM1 IO
         7, 2, 21 + 50, 18 + 50, // PWM2 IO
+
+        99 // END
+    },
+    {
+        "主灯&筒灯",  // 1 Channel & 2 PWM
+        1, 1, 2 + 50,         // LED IO
+        2, 1, 23, // RELAY IO
+        3, 2, 36, 39, // BUTTON IO
+        4, 2, 32, 33, // RELAY LED IO
+        5, 1, 4,              // 433 IO
+
+        6, 1, 22 + 50, // PWM1 IO
+        7, 1, 21 + 50, // PWM2 IO
+
+        99 // END
+    },
+    {
+        "Yeelight",  // 1 Channel & 2 PWM
+        1, 1, 2 + 50,         // LED IO
+        3, 1, 36, // BUTTON IO
+        4, 1, 32, // RELAY LED IO
+        5, 1, 4,              // 433 IO
+
+        6, 1, 22, // PWM1 IO
+        7, 1, 21, // PWM2 IO
 
         99 // END
     },

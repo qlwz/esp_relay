@@ -63,7 +63,7 @@ private:
 public:
     uint8_t operationFlag = 0; // 0每秒
     RelayConfigMessage config;
-    uint8_t lastState = 0;
+    uint16_t lastState = 0;
     uint8_t channels = 0;
     Ticker ledTicker;
 

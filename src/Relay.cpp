@@ -146,24 +146,18 @@ void Relay::loop()
         radioReceive->loop();
     }
 #endif
-
-    if (bitRead(operationFlag, 0))
-    {
-        bitClear(operationFlag, 0);
-        if (perSecond % 60 == 0)
-        {
-            checkCanLed();
-        }
-        if (config.report_interval > 0 && (perSecond % config.report_interval) == 0)
-        {
-            reportPower();
-        }
-    }
 }
 
 void Relay::perSecondDo()
 {
-    bitSet(operationFlag, 0);
+    if (perSecond % 60 == 0)
+    {
+        checkCanLed();
+    }
+    if (config.report_interval > 0 && (perSecond % config.report_interval) == 0)
+    {
+        reportPower();
+    }
 }
 #pragma endregion
 
@@ -190,7 +184,7 @@ void Relay::readConfig()
 
 void Relay::resetConfig()
 {
-    Debug::AddInfo(PSTR("moduleResetConfig . . . OK"));
+    Log::Info(PSTR("moduleResetConfig . . . OK"));
     memset(&config, 0, sizeof(RelayConfigMessage));
     config.module_type = 0;
     config.led_light = 50;
@@ -206,7 +200,7 @@ void Relay::resetConfig()
     config.module_type = CH1;
 #endif
 #else
-    config.module_type = CH2_PWM;
+    config.module_type = CH1_PWM1;
 #endif
     globalConfig.mqtt.interval = 60 * 60;
     globalConfig.debug.type = globalConfig.debug.type | 4;
@@ -215,7 +209,7 @@ void Relay::resetConfig()
     config.led_type = 2;
     config.led_start = 1800;
     config.led_end = 2300;
-    config.led = 2;
+    config.led = 1;
     config.report_interval = 60 * 5;
 #endif
 }
@@ -294,7 +288,7 @@ void Relay::mqttDiscovery(bool isEnable)
                 dimming->mqttDiscovery(message, ch);
             }
 #endif
-            //Debug::AddInfo(PSTR("discovery: %s - %s"), topic, message);
+            //Log::Info(PSTR("discovery: %s - %s"), topic, message);
             Mqtt::publish(topic, message, true);
         }
         else
@@ -767,7 +761,7 @@ void Relay::ledPWM(uint8_t ch, bool isOn)
                 }
             }
             ledTicker.detach();
-            Debug::AddInfo(PSTR("ledTicker detach"));
+            Log::Info(PSTR("ledTicker detach"));
         }
     }
     else
@@ -775,7 +769,7 @@ void Relay::ledPWM(uint8_t ch, bool isOn)
         if (!ledTicker.active())
         {
             ledTicker.attach_ms(config.led_time, []() { ((Relay *)module)->ledTickerHandle(); });
-            Debug::AddInfo(PSTR("ledTicker active"));
+            Log::Info(PSTR("ledTicker active"));
         }
     }
 }
@@ -822,10 +816,10 @@ bool Relay::checkCanLed(bool re)
         if ((!result || config.led_type != 2) && ledTicker.active())
         {
             ledTicker.detach();
-            Debug::AddInfo(PSTR("ledTicker detach2"));
+            Log::Info(PSTR("ledTicker detach2"));
         }
         Relay::canLed = result;
-        Debug::AddInfo(result ? PSTR("led can light") : PSTR("led can not light"));
+        Log::Info(result ? PSTR("led can light") : PSTR("led can not light"));
         for (uint8_t ch = 0; ch < channels; ch++)
         {
             if (RELAY_LED_PIN[ch] != 99)
@@ -843,7 +837,7 @@ void Relay::switchRelay(uint8_t ch, bool isOn, bool isSave)
 {
     if (ch > channels)
     {
-        Debug::AddInfo(PSTR("invalid channel: %d"), ch);
+        Log::Info(PSTR("invalid channel: %d"), ch);
         return;
     }
 
@@ -867,7 +861,7 @@ void Relay::switchRelay(uint8_t ch, bool isOn, bool isSave)
     else
     {
 #endif
-        Debug::AddInfo(PSTR("Relay %d . . . %s"), ch + 1, isOn ? "ON" : "OFF");
+        Log::Info(PSTR("Relay %d . . . %s"), ch + 1, isOn ? "ON" : "OFF");
         digitalWrite(RELAY_PIN[ch], isOn ? HIGH : LOW);
 #ifdef USE_DIMMING
     }
@@ -919,12 +913,12 @@ void Relay::cheackButton(uint8_t ch)
                 }
                 else
                 {
-                    if (config.brightness[ch] > 10)
+                    if (config.brightness[ch] > 2)
                     {
                         config.brightness[ch]--;
                     }
                 }
-                //Debug::AddInfo(PSTR("brightness %d : %d"), ch + 1, config.brightness[ch]);
+                //Log::Info(PSTR("brightness %d : %d"), ch + 1, config.brightness[ch]);
                 switchRelay(ch, true, true);
                 lastTime[ch] = millis();
                 bitSet(dimmingState[ch - dimming->pwmstartch], 2);
@@ -1046,7 +1040,7 @@ void Relay::cheackButton(uint8_t ch)
     if (switchCount[ch] > 0 && (millis() - buttonIntervalStart[ch]) > specialFunctionTimeout)
     {
         Led::led(200);
-        Debug::AddInfo(PSTR("switchCount %d : %d"), ch + 1, switchCount[ch]);
+        Log::Info(PSTR("switchCount %d : %d"), ch + 1, switchCount[ch]);
 
         if (switchCount[ch] >= 20)
         {
@@ -1100,36 +1094,36 @@ void Relay::loadModule(uint8_t module)
             {
             case 1:
                 LED_PIN = m.io[pos++];
-                //Debug::AddInfo(PSTR("LED_PIN %d"), LED_PIN);
+                //Log::Info(PSTR("LED_PIN %d"), LED_PIN);
                 break;
             case 2:
                 RELAY_PIN[i] = m.io[pos++];
-                //Debug::AddInfo(PSTR("RELAY_PIN %d"), RELAY_PIN[i]);
+                //Log::Info(PSTR("RELAY_PIN %d"), RELAY_PIN[i]);
                 break;
             case 3:
                 BOTTON_PIN[i] = m.io[pos++];
-                //Debug::AddInfo(PSTR("BOTTON_PIN %d"), BOTTON_PIN[i]);
+                //Log::Info(PSTR("BOTTON_PIN %d"), BOTTON_PIN[i]);
                 break;
             case 4:
                 RELAY_LED_PIN[i] = m.io[pos++];
-                //Debug::AddInfo(PSTR("RELAY_LED_PIN %d"), RELAY_LED_PIN[i]);
+                //Log::Info(PSTR("RELAY_LED_PIN %d"), RELAY_LED_PIN[i]);
                 break;
             case 5:
                 RFRECV_PIN = m.io[pos++];
-                //Debug::AddInfo(PSTR("RFRECV_PIN %d"), RFRECV_PIN);
+                //Log::Info(PSTR("RFRECV_PIN %d"), RFRECV_PIN);
                 break;
 #ifdef USE_DIMMING
             case 6:
                 PWM_BRIGHTNESS_PIN[i] = m.io[pos++];
-                //Debug::AddInfo(PSTR("PWM_BRIGHTNESS_PIN %d"), PWM_BRIGHTNESS_PIN[i]);
+                //Log::Info(PSTR("PWM_BRIGHTNESS_PIN %d"), PWM_BRIGHTNESS_PIN[i]);
                 break;
             case 7:
                 PWM_TEMPERATURE_PIN[i] = m.io[pos++];
-                //Debug::AddInfo(PSTR("PWM_TEMPERATURE_PIN %d"), PWM_TEMPERATURE_PIN[i]);
+                //Log::Info(PSTR("PWM_TEMPERATURE_PIN %d"), PWM_TEMPERATURE_PIN[i]);
                 break;
             case 8:
                 ROT_PIN[i] = m.io[pos++];
-                //Debug::AddInfo(PSTR("ROT_PIN %d"), ROT_PIN[i]);
+                //Log::Info(PSTR("ROT_PIN %d"), ROT_PIN[i]);
                 break;
 #endif
             default:

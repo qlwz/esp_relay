@@ -15,14 +15,14 @@ void RadioReceive::study(uint8_t ch)
 {
     studyCH = 10 + ch;
     studyTime = millis();
-    Debug::AddInfo(PSTR("Receive study . . . "));
+    Log::Info(PSTR("Receive study . . . "));
 }
 
 void RadioReceive::del(uint8_t ch)
 {
     studyCH = 20 + ch;
     studyTime = millis();
-    Debug::AddInfo(PSTR("Receive del . . . "));
+    Log::Info(PSTR("Receive del . . . "));
 }
 
 void RadioReceive::delAll()
@@ -32,14 +32,14 @@ void RadioReceive::delAll()
     relay->config.study_index[2] = 0;
     relay->config.study_index[3] = 0;
     Config::saveConfig();
-    Debug::AddInfo(PSTR("Receive delAll . . . "));
+    Log::Info(PSTR("Receive delAll . . . "));
 }
 
 void RadioReceive::loop()
 {
     if (studyCH != 0 && millis() - studyTime > 10000) // 10秒超时
     {
-        Debug::AddInfo(PSTR("Receive study timeout"));
+        Log::Info(PSTR("Receive study timeout"));
         studyCH = 0;
     }
 
@@ -49,7 +49,7 @@ void RadioReceive::loop()
     }
 
     unsigned long value = mySwitch->getReceivedValue();
-    //Debug::AddError(PSTR("315Mhz: %d"), value);
+    //Log::Error(PSTR("315Mhz: %d"), value);
     mySwitch->resetAvailable();
     if (lastVaue == value && millis() - lastTime < 1000)
     {
@@ -67,21 +67,21 @@ void RadioReceive::loop()
 		{
 			if (config.relay_study[i] != 0)
 			{
-				Debug::AddInfo(PSTR("study %d %d"), i, config.relay_study[i]);
+				Log::Info(PSTR("study %d %d"), i, config.relay_study[i]);
 			}
 		}
 		*/
 
         for (size_t ch = 0; ch < relay->channels; ch++)
         {
-            //Debug::AddInfo(PSTR("study channel %d index %d"), ch, config.relay_study_index[ch]);
+            //Log::Info(PSTR("study channel %d index %d"), ch, config.relay_study_index[ch]);
             for (size_t i = 0; i < relay->config.study_index[ch]; i++)
             {
-                //Debug::AddInfo(PSTR("study id %d"), (ch * MAX_STUDY_RECEIVER_NUM) + i);
+                //Log::Info(PSTR("study id %d"), (ch * MAX_STUDY_RECEIVER_NUM) + i);
                 if (relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + i] == value)
                 {
                     isOk = true;
-                    Debug::AddInfo(PSTR("Received %d to channel %d"), value, ch + 1);
+                    Log::Info(PSTR("Received %d to channel %d"), value, ch + 1);
                     relay->switchRelay(ch, !bitRead(relay->lastState, ch), true);
                     break;
                 }
@@ -89,7 +89,7 @@ void RadioReceive::loop()
         }
         if (!isOk)
         {
-            //Debug::AddInfo(PSTR("Receive %d no channel"), value);
+            //Log::Info(PSTR("Receive %d no channel"), value);
         }
         Led::led(200);
     }
@@ -111,7 +111,7 @@ void RadioReceive::loop()
             }
         }
 
-        Debug::AddInfo(PSTR("Received %d del to channel %d"), value, (ch) + 1);
+        Log::Info(PSTR("Received %d del to channel %d"), value, (ch) + 1);
         studyCH = 0;
         Led::blinkLED(200, 5);
     }
@@ -119,12 +119,12 @@ void RadioReceive::loop()
     {
         uint8_t ch = studyCH - 10;
         uint8_t index = relay->config.study_index[ch];
-        Debug::AddInfo(PSTR("study index %d %d"), ch, index);
+        Log::Info(PSTR("study index %d %d"), ch, index);
         for (uint8_t i = 0; i < index; i++)
         {
             if (relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + i] == value)
             {
-                Debug::AddInfo(PSTR("Received %d study to channel %d is has"), value, (ch) + 1);
+                Log::Info(PSTR("Received %d study to channel %d is has"), value, (ch) + 1);
                 studyCH = 0;
                 return;
             }
@@ -145,7 +145,7 @@ void RadioReceive::loop()
         }
         Config::saveConfig();
 
-        Debug::AddInfo(PSTR("Received %d study to channel %d"), value, (ch) + 1);
+        Log::Info(PSTR("Received %d study to channel %d"), value, (ch) + 1);
         studyCH = 0;
         Led::blinkLED(200, 5);
     }

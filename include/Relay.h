@@ -25,7 +25,6 @@ class RadioReceive;
 class Relay : public Module
 {
 private:
-    uint8_t operationFlag = 0; // 0每秒
 
     char powerStatTopic[80];
 
@@ -33,11 +32,11 @@ private:
     // 等待开关再次切换的时间（以毫秒为单位）。
     // 300对我来说效果很好，几乎没有引起注意。 如果您不想使用此功能，请设置为0。
     uint16_t specialFunctionTimeout = 300;
-    unsigned long buttonTimingStart[4];
-    unsigned long buttonIntervalStart[4];
-    uint8_t buttonStateFlag[4];
-    uint8_t switchCount[4];
-    unsigned long lastTime[4];
+    unsigned long buttonTimingStart[MAX_RELAY_NUM + MAX_PWM_NUM];
+    unsigned long buttonIntervalStart[MAX_RELAY_NUM + MAX_PWM_NUM];
+    uint8_t buttonStateFlag[MAX_RELAY_NUM + MAX_PWM_NUM];
+    uint8_t switchCount[MAX_RELAY_NUM + MAX_PWM_NUM];
+    unsigned long lastTime[MAX_RELAY_NUM + MAX_PWM_NUM];
     void cheackButton(uint8_t ch);
 
     // PWM
@@ -62,6 +61,7 @@ private:
     void reportChannel(uint8_t ch);
 
 public:
+    uint8_t operationFlag = 0; // 0每秒
     RelayConfigMessage config;
     uint8_t lastState = 0;
     uint8_t channels = 0;
@@ -78,7 +78,7 @@ public:
     void init();
     String getModuleName() { return F("relay"); }
     String getModuleCNName();
-    String getModuleVersion() { return F("2020.11.03.2100"); }
+    String getModuleVersion() { return F("2020.11.30.1601"); }
     String getModuleAuthor() { return F("情留メ蚊子"); }
     bool moduleLed();
 

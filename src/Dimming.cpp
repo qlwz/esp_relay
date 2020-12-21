@@ -60,10 +60,6 @@ void Dimming::init(Relay *_relay)
 
 #ifdef WIFI_SSID
 #ifdef ESP32
-    if (relay->config.module_type != CH1_PWM1)
-    {
-        pinMode(23, OUTPUT);
-    }
     pinMode(13, OUTPUT);
     pinMode(27, OUTPUT);
 #endif
@@ -122,7 +118,7 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
     uint8_t pwmch = ch - pwmstartch;
     if (!isOn)
     {
-        Debug::AddInfo(PSTR("PWMRelay %d . . . %s"), ch + 1, isOn ? "ON" : "OFF");
+        Log::Info(PSTR("PWMRelay %d . . . %s"), ch + 1, isOn ? "ON" : "OFF");
 
         target_color[pwmch] = 0;
         if (PWM_TEMPERATURE_PIN[pwmch] != 99)
@@ -135,17 +131,6 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
         }
         return;
     }
-
-#ifdef WIFI_SSID
-#ifdef ESP32
-    if (relay->config.module_type != CH1_PWM1)
-    {
-        digitalWrite(23, 1);
-    }
-    digitalWrite(13, 1);
-    digitalWrite(27, 1);
-#endif
-#endif
 
     uint8_t brightness = relay->config.brightness[ch];
     if (brightness == 0)
@@ -200,14 +185,22 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
         }
 #endif
 
-        Debug::AddInfo(PSTR("Relay %d . . . Color:%d %d  %d  Brightness:%d %d %d"), ch + 1, ct, icold, target_color[MAX_PWM_NUM * 2 - 1 - pwmch], brightness, iwarm, target_color[pwmch]);
+        Log::Info(PSTR("Relay %d . . . Color:%d %d  %d  Brightness:%d %d %d"), ch + 1, ct, icold, target_color[MAX_PWM_NUM * 2 - 1 - pwmch], brightness, iwarm, target_color[pwmch]);
     }
     else
     {
         float dimmer = 100 / (float)brightness;
         target_color[pwmch] = 255 / dimmer * (pwm_range / 255);
-        Debug::AddInfo(PSTR("Relay %d %d. . . Brightness:%d %d"), ch + 1, pwmch, brightness, target_color[pwmch]);
+        Log::Info(PSTR("Relay %d %d. . . Brightness:%d %d"), ch + 1, pwmch, brightness, target_color[pwmch]);
     }
+
+#ifdef WIFI_SSID
+#ifdef ESP32
+    digitalWrite(13, 1);
+    digitalWrite(27, brightness > 10 ? 1 : 0);
+#endif
+#endif
+
     if (!pwmTicker.active())
     {
         pwmTicker.attach_ms(10, []() { ((Relay *)module)->dimming->animate(); });
@@ -239,7 +232,7 @@ IRAM_ATTR void Dimming::animate(void)
             }
         }
 
-        //Debug::AddInfo(PSTR("a%d %d %d"), i, target_color[i], current_color[i]);
+        //Log::Info(PSTR("a%d %d %d"), i, target_color[i], current_color[i]);
 
 #ifdef ESP8266
         if (i < MAX_PWM_NUM)
@@ -274,10 +267,6 @@ IRAM_ATTR void Dimming::animate(void)
         }
     }
 #ifdef ESP32
-    if (relay->config.module_type != CH1_PWM1)
-    {
-        digitalWrite(23, 0);
-    }
     digitalWrite(13, 0);
     digitalWrite(27, 0);
 #endif
@@ -377,7 +366,7 @@ void Dimming::RotaryHandler(void)
             {
                 t = 500;
             }
-            Debug::AddInfo(PSTR("SetColorTemp:  %d"), Rotary.position);
+            Log::Info(PSTR("SetColorTemp:  %d"), Rotary.position);
             relay->config.color_temp[ch] = t;
             relay->switchRelay(ch, relay->config.brightness[ch] != 0, true);
         }
@@ -393,7 +382,7 @@ void Dimming::RotaryHandler(void)
             {
                 d = 100;
             }
-            Debug::AddInfo(PSTR("SetBrightness:  %d"), Rotary.position);
+            Log::Info(PSTR("SetBrightness:  %d"), Rotary.position);
             relay->config.brightness[ch] = d;
             relay->switchRelay(ch, relay->config.brightness[ch] != 0, true);
         }

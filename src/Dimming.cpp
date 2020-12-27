@@ -136,6 +136,7 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
     if (brightness == 0)
     {
         brightness = 100;
+        relay->config.brightness[ch] = brightness;
     }
 
     if (PWM_TEMPERATURE_PIN[pwmch] != 99)
@@ -425,8 +426,9 @@ void Dimming::httpSetBrightness(WebServer *server)
         relay->switchRelay(ch, relay->config.brightness[ch] != 0, true);
     }
 
-    snprintf_P(tmpData, sizeof(tmpData), PSTR("{\"code\":1,\"msg\":\"操作成功\",\"data\":{%s}}"), relay->httpGetStatus(server).c_str());
-    server->send_P(200, PSTR("application/json"), tmpData);
+    char html[512] = {0};
+    snprintf_P(html, sizeof(html), PSTR("{\"code\":1,\"msg\":\"操作成功\",\"data\":{%s}}"), relay->httpGetStatus(server).c_str());
+    server->send_P(200, PSTR("application/json"), html);
 }
 
 IRAM_ATTR void Dimming::loop()
@@ -436,25 +438,27 @@ IRAM_ATTR void Dimming::loop()
 
 void Dimming::httpHtml(WebServer *server)
 {
+    char html[512] = {0};
     for (size_t ch = pwmstartch; ch < relay->channels; ch++)
     {
         if (PWM_TEMPERATURE_PIN[ch - pwmstartch] != 99)
         {
-            snprintf_P(tmpData, sizeof(tmpData),
+            snprintf_P(html, sizeof(html),
                        PSTR("</td></tr><tr><td>色温%d</td><td><input type='range' min='153' max='500' id='color%d' value='%d' onchange='ajaxPost(\"/set_brightness\", \"ch=%d&c=\"+this.value);this.nextSibling.nextSibling.innerHTML=this.value'/>&nbsp;<span>%d</span>"),
                        ch - pwmstartch + 1, ch + 1, relay->config.color_temp[ch], ch + 1, relay->config.color_temp[ch]);
-            server->sendContent_P(tmpData);
+            server->sendContent_P(html);
         }
 
-        snprintf_P(tmpData, sizeof(tmpData),
+        snprintf_P(html, sizeof(html),
                    PSTR("</td></tr><tr><td>亮度%d</td><td><input type='range' min='0' max='100' id='brightness%d' value='%d' onchange='ajaxPost(\"/set_brightness\", \"ch=%d&b=\"+this.value);this.nextSibling.nextSibling.innerHTML=this.value+\"%\"'/>&nbsp;<span>%d%</span>"),
                    ch - pwmstartch + 1, ch + 1, relay->config.brightness[ch], ch + 1, relay->config.brightness[ch]);
-        server->sendContent_P(tmpData);
+        server->sendContent_P(html);
     }
 }
 
 void Dimming::httpHa(WebServer *server, uint8_t ch)
 {
+    char html[512] = {0};
     char brightnessCmndTopic[100];
     strcpy(brightnessCmndTopic, Mqtt::getCmndTopic(F("brightness1")).c_str());
     char brightnessStatTopic[100];
@@ -463,12 +467,12 @@ void Dimming::httpHa(WebServer *server, uint8_t ch)
     // 亮度
     brightnessCmndTopic[strlen(brightnessCmndTopic) - 1] = ch + 49; // 48 + 1 + ch
     brightnessStatTopic[strlen(brightnessStatTopic) - 1] = ch + 49; // 48 + 1 + ch
-    snprintf_P(tmpData, sizeof(tmpData),
+    snprintf_P(html, sizeof(html),
                PSTR("    brightness_state_topic: \"%s\"\r\n"
                     "    brightness_command_topic: \"%s\"\r\n"
                     "    brightness_scale: 100\r\n"),
                brightnessStatTopic, brightnessCmndTopic);
-    server->sendContent_P(tmpData);
+    server->sendContent_P(html);
 
     // 色温
     if (PWM_TEMPERATURE_PIN[ch - pwmstartch] != 99)
@@ -480,11 +484,11 @@ void Dimming::httpHa(WebServer *server, uint8_t ch)
 
         color_tempCmndTopic[strlen(color_tempCmndTopic) - 1] = ch + 49; // 48 + 1 + ch
         color_tempStatTopic[strlen(color_tempStatTopic) - 1] = ch + 49; // 48 + 1 + ch
-        snprintf_P(tmpData, sizeof(tmpData),
+        snprintf_P(html, sizeof(html),
                    PSTR("    color_temp_state_topic: \"%s\"\r\n"
                         "    color_temp_command_topic: \"%s\"\r\n"),
                    color_tempStatTopic, color_tempCmndTopic);
-        server->sendContent_P(tmpData);
+        server->sendContent_P(html);
     }
 }
 

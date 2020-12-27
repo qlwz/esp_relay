@@ -9,6 +9,34 @@ void RadioReceive::init(Relay *_relay, uint8_t io)
     mySwitch = new RCSwitch();
     pinMode(io, INPUT);
     mySwitch->enableReceive(digitalPinToInterrupt(io));
+
+#ifdef WIFI_SSID
+    if (strcmp(UID, "2_s_pwm") == 0)
+    {
+        saveStudy(0, 6313464);
+        saveStudy(1, 6313460);
+    }
+    else if (strcmp(UID, "2_b_pwm") == 0)
+    {
+        saveStudy(0, 6313592);
+        saveStudy(1, 6313588);
+    }
+    else if (strcmp(UID, "3_m_pwm") == 0)
+    {
+        saveStudy(0, 6313160);
+        saveStudy(1, 6313156);
+    }
+    else if (strcmp(UID, "3_s_pwm") == 0)
+    {
+        saveStudy(0, 6329048);
+        saveStudy(1, 6329044);
+    }
+    else if (strcmp(UID, "3_b_pwm") == 0)
+    {
+        saveStudy(0, 6336056);
+        saveStudy(1, 6336052);
+    }
+#endif
 }
 
 void RadioReceive::study(uint8_t ch)
@@ -49,7 +77,7 @@ void RadioReceive::loop()
     }
 
     unsigned long value = mySwitch->getReceivedValue();
-    //Log::Error(PSTR("315Mhz: %d"), value);
+    //Log::Error(PSTR("433Mhz: %d"), value);
     mySwitch->resetAvailable();
     if (lastVaue == value && millis() - lastTime < 1000)
     {
@@ -96,58 +124,67 @@ void RadioReceive::loop()
     else if (studyCH >= 20) // 删除学习
     {
         uint8_t ch = studyCH - 20;
-
-        uint8_t index = relay->config.study_index[ch];
-        for (int i = 0; i <= index; ++i)
-        {
-            if (relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + i] == value)
-            {
-                for (int j = i; j <= index - 1; j++)
-                {
-                    relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + j] = relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + (j + 1)];
-                }
-                relay->config.study_index[ch] = --index;
-                Config::saveConfig();
-            }
-        }
-
-        Log::Info(PSTR("Received %d del to channel %d"), value, (ch) + 1);
+        delStudy(ch, value);
         studyCH = 0;
         Led::blinkLED(200, 5);
     }
     else if (studyCH >= 10) // 学习
     {
         uint8_t ch = studyCH - 10;
-        uint8_t index = relay->config.study_index[ch];
-        Log::Info(PSTR("study index %d %d"), ch, index);
-        for (uint8_t i = 0; i < index; i++)
-        {
-            if (relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + i] == value)
-            {
-                Log::Info(PSTR("Received %d study to channel %d is has"), value, (ch) + 1);
-                studyCH = 0;
-                return;
-            }
-        }
-
-        if (index >= MAX_STUDY_RECEIVER_NUM)
-        {
-            for (int j = 0; j < index - 1; j++)
-            {
-                relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + j] = relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + (j + 1)];
-            }
-            relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + (MAX_STUDY_RECEIVER_NUM - 1)] = value;
-        }
-        else
-        {
-            relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + index] = value;
-            relay->config.study_index[ch] = ++index;
-        }
-        Config::saveConfig();
-
-        Log::Info(PSTR("Received %d study to channel %d"), value, (ch) + 1);
+        saveStudy(ch, value);
         studyCH = 0;
         Led::blinkLED(200, 5);
     }
+}
+
+void RadioReceive::delStudy(uint8_t ch, unsigned long value)
+{
+    uint8_t index = relay->config.study_index[ch];
+    for (int i = 0; i <= index; ++i)
+    {
+        if (relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + i] == value)
+        {
+            for (int j = i; j <= index - 1; j++)
+            {
+                relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + j] = relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + (j + 1)];
+            }
+            relay->config.study_index[ch] = --index;
+        }
+    }
+
+    Config::saveConfig();
+    Log::Info(PSTR("Received %d del to channel %d"), value, (ch) + 1);
+}
+
+void RadioReceive::saveStudy(uint8_t ch, unsigned long value)
+{
+    uint8_t index = relay->config.study_index[ch];
+    Log::Info(PSTR("study index %d %d"), ch, index);
+    for (uint8_t i = 0; i < index; i++)
+    {
+        if (relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + i] == value)
+        {
+            Log::Info(PSTR("Received %d study to channel %d is has"), value, (ch) + 1);
+            studyCH = 0;
+            return;
+        }
+    }
+
+    if (index >= MAX_STUDY_RECEIVER_NUM)
+    {
+        for (int j = 0; j < index - 1; j++)
+        {
+            relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + j] = relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + (j + 1)];
+        }
+        relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + (MAX_STUDY_RECEIVER_NUM - 1)] = value;
+    }
+    else
+    {
+        relay->config.study[(ch * MAX_STUDY_RECEIVER_NUM) + index] = value;
+        relay->config.study_index[ch] = ++index;
+    }
+    Config::saveConfig();
+
+    Log::Info(PSTR("Received %d study to channel %d"), value, (ch) + 1);
 }
 #endif

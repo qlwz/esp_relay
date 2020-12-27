@@ -5,8 +5,8 @@
 
 #define MAX_GPIO_PIN 50 // Number of supported GPIO
 
-#define MAX_RELAY_NUM 4
-#define MAX_PWM_NUM 4
+#define MAX_RELAY_NUM 8
+#define MAX_PWM_NUM 8
 
 #ifndef USE_DIMMING
 #undef MAX_PWM_NUM
@@ -41,12 +41,16 @@ enum SupportedModules
     CH3,
     iciness_CH3,
     Yeelight,
+    WEILE,
 
 #else
     PMW4,
     CH2_PWM,
     CH1_PWM1,
     Yeelight,
+#ifdef USE_SHUJI
+    Shuji_PWM6,
+#endif
 #endif
 
     MAXMODULE // 占位
@@ -111,12 +115,20 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
 
         99 // END
     },
+    {
+        "威乐回水器",  // 2 Channel (ESP8285)
+        1, 1, 16 + 50, // LED IO
+        2, 2, 14, 12,  // RELAY IO
+        5, 1, 13,      // 433 IO
+
+        99 // END
+    },
 #else
     {
         "4路调光",            // 4 PWM
         1, 1, 2,              // LED IO
         3, 4, 36, 39, 34, 35, // BUTTON IO
-        4, 4, 32, 33, 25, 26, // RELAY LED IO
+                              // 4, 4, 32, 33, 25, 26, // RELAY LED IO
 
         6, 4, 22 + 50, 21 + 50, 19 + 50, 18 + 50, // PWM1 IO
 
@@ -158,7 +170,19 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
         7, 1, 21, // PWM2 IO
 
         99 // END
-    }
+    },
+#ifdef USE_SHUJI
+    {
+        "书记十二路",                                              // 6 Channel
+        1, 1, 2 + 50,                                              // LED IO
+        2, 6, 12, 12, 12, 12, 12, 12,                              // RELAY IO
+        3, 12, 36, 39, 34, 35, 32, 33, 25, 26, 27, 14, 15, 0,      // BUTTON IO
+        4, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY LED IO
+        6, 6, 23 + 50, 22 + 50, 21 + 50, 19 + 50, 18 + 50, 5 + 50, // PWM1 IO
+
+        99 // END
+    },
+#endif
 #endif
 };
 

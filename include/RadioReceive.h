@@ -23,6 +23,9 @@ public:
     void del(uint8_t ch);
     void delAll();
     void loop();
+
+    void delStudy(uint8_t ch, unsigned long value);
+    void saveStudy(uint8_t ch, unsigned long value);
 };
 
 #endif

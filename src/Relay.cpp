@@ -5,6 +5,9 @@
 #ifdef USE_HOMEKIT
 #include "HomeKit.h"
 #endif
+#ifdef USE_SHUJI
+#include <ShiftRegister74HC595.h>
+#endif
 
 uint8_t LED_PIN = 99;
 uint8_t RFRECV_PIN = 99;
@@ -19,6 +22,10 @@ unsigned long colorOffTime[MAX_PWM_NUM];
 uint8_t PWM_BRIGHTNESS_PIN[MAX_PWM_NUM];
 uint8_t PWM_TEMPERATURE_PIN[MAX_PWM_NUM];
 uint8_t ROT_PIN[2];
+#endif
+
+#ifdef USE_SHUJI
+ShiftRegister74HC595<2> sr(4, 17, 16);
 #endif
 
 #pragma region 继承
@@ -99,6 +106,13 @@ void Relay::init()
     }
 
     checkCanLed(true);
+#ifdef USE_SHUJI
+    if (config.module_type == Shuji_PWM6)
+    {
+        sr.set(7, true);
+        sr.set(15, true);
+    }
+#endif
 }
 
 bool Relay::moduleLed()
@@ -111,7 +125,7 @@ bool Relay::moduleLed()
     }
 #endif
 
-    if (WiFi.status() == WL_CONNECTED && Mqtt::mqttClient.connected())
+    if (bitRead(Config::statusFlag, 0) && bitRead(Config::statusFlag, 1))
     {
         if (config.led == 0)
         {
@@ -344,18 +358,23 @@ String Relay::httpGetStatus(WebServer *server)
 
 void Relay::httpHtml(WebServer *server)
 {
+    char html[512] = {0};
     server->sendContent_P(
         PSTR("<table class='gridtable'><thead><tr><th colspan='2'>开关状态</th></tr></thead><tbody>"
              "<tr style='text-align:center'><td colspan='2'>"));
 
     for (size_t ch = 0; ch < channels; ch++)
     {
-        snprintf_P(tmpData, sizeof(tmpData),
+        snprintf_P(html, sizeof(html),
                    PSTR(" <button type='button' style='width:50px' onclick=\"ajaxPost('/relay_do', 'do=T&c=%d');\" id='relay_%d' class='btn-%s'>%s</button>"),
                    ch + 1, ch + 1,
                    bitRead(lastState, ch) ? PSTR("success") : PSTR("info"),
                    bitRead(lastState, ch) ? PSTR("开") : PSTR("关"));
-        server->sendContent_P(tmpData);
+        server->sendContent_P(html);
+        if (channels >= 12 && (ch + 1) == (channels / 2))
+        {
+            server->sendContent_P("<br><br>");
+        }
     }
 
 #ifdef USE_DIMMING
@@ -377,8 +396,8 @@ void Relay::httpHtml(WebServer *server)
                  "<select id='module_type' name='module_type' style='width:150px'>"));
         for (int count = 0; count < SupportedModules::MAXMODULE; count++)
         {
-            snprintf_P(tmpData, sizeof(tmpData), PSTR("<option value='%d'>%s</option>"), count, Modules[count].name);
-            server->sendContent_P(tmpData);
+            snprintf_P(html, sizeof(html), PSTR("<option value='%d'>%s</option>"), count, Modules[count].name);
+            server->sendContent_P(html);
         }
 
         server->sendContent_P(PSTR("</select></td></tr>"));
@@ -418,15 +437,15 @@ void Relay::httpHtml(WebServer *server)
                  //"<label class='bui-radios-label'><input type='radio' name='led_type' value='3'/><i class='bui-radios'></i> WS2812</label>"
                  "</td></tr>"));
 
-        snprintf_P(tmpData, sizeof(tmpData),
+        snprintf_P(html, sizeof(html),
                    PSTR("<tr><td>指示灯亮度</td><td><input type='range' min='1' max='100' name='led_light' value='%d' onchange='ledLightRangOnChange(this)'/>&nbsp;<span>%d</span></td></tr>"),
                    config.led_light, config.led_light);
-        server->sendContent_P(tmpData);
+        server->sendContent_P(html);
 
-        snprintf_P(tmpData, sizeof(tmpData),
+        snprintf_P(html, sizeof(html),
                    PSTR("<tr><td>渐变时间</td><td><input type='number' name='relay_led_time' value='%d'>毫秒</td></tr>"),
                    config.led_time);
-        server->sendContent_P(tmpData);
+        server->sendContent_P(html);
 
         String tmp = "";
         for (uint8_t i = 0; i <= 23; i++)
@@ -463,18 +482,18 @@ void Relay::httpHtml(WebServer *server)
                  "</td></tr>"));
     }
 
-    snprintf_P(tmpData, sizeof(tmpData),
+    snprintf_P(html, sizeof(html),
                PSTR("<tr><td>主动上报间隔</td><td><input type='number' min='0' max='3600' name='report_interval' required value='%d'>&nbsp;秒，0关闭</td></tr>"),
                config.report_interval);
-    server->sendContent_P(tmpData);
+    server->sendContent_P(html);
 
 #ifdef USE_DIMMING
     if (dimming)
     {
-        snprintf_P(tmpData, sizeof(tmpData),
+        snprintf_P(html, sizeof(html),
                    PSTR("<tr><td>PWM最大亮度</td><td><input type='range' min='20' max='100' name='max_pwm' value='%d' onchange='this.nextSibling.nextSibling.innerHTML=this.value'/>&nbsp;<span>%d</span></td></tr>"),
                    config.max_pwm, config.max_pwm);
-        server->sendContent_P(tmpData);
+        server->sendContent_P(html);
     }
 #endif
 
@@ -491,20 +510,20 @@ void Relay::httpHtml(WebServer *server)
                  "<tr><td>学习模式</td><td>"));
         for (size_t ch = 0; ch < channels; ch++)
         {
-            snprintf_P(tmpData, sizeof(tmpData),
+            snprintf_P(html, sizeof(html),
                        PSTR(" <button type='button' style='width:60px' onclick=\"ajaxPost('/rf_do', 'do=s&c=%d')\" class='btn-success'>%d路</button>"),
                        ch + 1, ch + 1);
-            server->sendContent_P(tmpData);
+            server->sendContent_P(html);
         }
 
         server->sendContent_P(PSTR("</td></tr>"
                                    "<tr><td>删除模式</td><td>"));
         for (size_t ch = 0; ch < channels; ch++)
         {
-            snprintf_P(tmpData, sizeof(tmpData),
+            snprintf_P(html, sizeof(html),
                        PSTR(" <button type='button' style='width:60px' onclick=\"ajaxPost('/rf_do', 'do=d&c=%d')\" class='btn-info'>%d路</button>"),
                        ch + 1, ch + 1);
-            server->sendContent_P(tmpData);
+            server->sendContent_P(html);
         }
 
         server->sendContent_P(
@@ -512,7 +531,7 @@ void Relay::httpHtml(WebServer *server)
                  "<tr><td>全部删除</td><td>"));
         for (size_t ch = 0; ch < channels; ch++)
         {
-            snprintf_P(tmpData, sizeof(tmpData),
+            snprintf_P(html, sizeof(html),
                        PSTR(" <button type='button' style='width:60px' onclick=\"javascript:if(confirm('确定要清空射频遥控？')){ajaxPost('/rf_do', 'do=c&c=%d');}\" class='btn-danger'>%d路</button>"),
                        ch + 1, ch + 1);
         }
@@ -532,22 +551,22 @@ void Relay::httpHtml(WebServer *server)
         PSTR("<script type='text/javascript'>"
              "function setDataSub(data,key){if(key.substr(0,5)=='relay'){var t=id(key);var v=data[key];t.setAttribute('class',v==1?'btn-success':'btn-info');t.innerHTML=v==1?'开':'关';return true}return false}"));
 
-    snprintf_P(tmpData, sizeof(tmpData), PSTR("id('module_type').value=%d;setRadioValue('power_on_state', '%d');setRadioValue('power_mode', '%d');setRadioValue('switch_mode', '%d');"),
+    snprintf_P(html, sizeof(html), PSTR("id('module_type').value=%d;setRadioValue('power_on_state', '%d');setRadioValue('power_mode', '%d');setRadioValue('switch_mode', '%d');"),
                config.module_type, config.power_on_state, config.power_mode, config.switch_mode);
-    server->sendContent_P(tmpData);
+    server->sendContent_P(html);
 
     if (RELAY_LED_PIN[0] != 99)
     {
-        snprintf_P(tmpData, sizeof(tmpData), PSTR("setRadioValue('led_type', '%d');id('led_start').value=%d;id('led_end').value=%d;"),
+        snprintf_P(html, sizeof(html), PSTR("setRadioValue('led_type', '%d');id('led_start').value=%d;id('led_end').value=%d;"),
                    config.led_type, config.led_start, config.led_end);
-        server->sendContent_P(tmpData);
+        server->sendContent_P(html);
         server->sendContent_P(PSTR("function ledLightRangOnChange(the){the.nextSibling.nextSibling.innerHTML=the.value};"));
     }
 
     if (LED_PIN != 99)
     {
-        snprintf_P(tmpData, sizeof(tmpData), PSTR("setRadioValue('led', '%d');"), config.led);
-        server->sendContent_P(tmpData);
+        snprintf_P(html, sizeof(html), PSTR("setRadioValue('led', '%d');"), config.led);
+        server->sendContent_P(html);
     }
     server->sendContent_P(PSTR("</script>"));
 }
@@ -563,8 +582,9 @@ void Relay::httpDo(WebServer *server)
     String str = server->arg(F("do"));
     switchRelay(ch, (str == F("on") ? true : (str == F("off") ? false : !bitRead(lastState, ch))));
 
-    snprintf_P(tmpData, sizeof(tmpData), PSTR("{\"code\":1,\"msg\":\"操作成功\",\"data\":{%s}}"), httpGetStatus(server).c_str());
-    server->send_P(200, PSTR("application/json"), tmpData);
+    char html[512] = {0};
+    snprintf_P(html, sizeof(html), PSTR("{\"code\":1,\"msg\":\"操作成功\",\"data\":{%s}}"), httpGetStatus(server).c_str());
+    server->send_P(200, PSTR("application/json"), html);
 }
 
 #ifdef USE_RCSWITCH
@@ -678,11 +698,11 @@ void Relay::httpSetting(WebServer *server)
 
 void Relay::httpHa(WebServer *server)
 {
-    char attachment[100];
-    snprintf_P(attachment, sizeof(attachment), PSTR("attachment; filename=%s.yaml"), UID);
+    char html[512];
+    snprintf_P(html, sizeof(html), PSTR("attachment; filename=%s.yaml"), UID);
 
     server->setContentLength(CONTENT_LENGTH_UNKNOWN);
-    server->sendHeader(F("Content-Disposition"), attachment);
+    server->sendHeader(F("Content-Disposition"), html);
     server->send_P(200, PSTR("application/octet-stream"), "light:\r\n");
 
     String availability = Mqtt::getTeleTopic(F("availability"));
@@ -694,7 +714,7 @@ void Relay::httpHa(WebServer *server)
         cmndTopic[strlen(cmndTopic) - 1] = ch + 49;           // 48 + 1 + ch
         powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
 
-        snprintf_P(tmpData, sizeof(tmpData),
+        snprintf_P(html, sizeof(html),
                    PSTR("  - platform: mqtt\r\n"
                         "    name: \"%s_ch%d\"\r\n"
                         "    state_topic: \"%s\"\r\n"
@@ -705,7 +725,7 @@ void Relay::httpHa(WebServer *server)
                         "    payload_available: \"online\"\r\n"
                         "    payload_not_available: \"offline\"\r\n"),
                    UID, ch + 1, powerStatTopic, cmndTopic, availability.c_str());
-        server->sendContent_P(tmpData);
+        server->sendContent_P(html);
 #ifdef USE_DIMMING
         if (dimming && ch >= dimming->pwmstartch)
         {
@@ -714,6 +734,7 @@ void Relay::httpHa(WebServer *server)
 #endif
         server->sendContent_P(PSTR("\r\n"));
     }
+    server->sendContent("");
 }
 #pragma endregion
 
@@ -781,6 +802,22 @@ void Relay::led(uint8_t ch, bool isOn)
         return;
     }
 
+#ifdef USE_SHUJI
+    if (config.module_type == Shuji_PWM6)
+    {
+        if (ch < 6)
+        {
+            ch += 1;
+        }
+        else
+        {
+            ch += 3;
+        }
+        sr.set(ch, !isOn);
+        return;
+    }
+#endif
+
     if (config.led_type == 1)
     {
         //digitalWrite(RELAY_LED_PIN[ch], isOn ? LOW : HIGH);
@@ -822,6 +859,13 @@ bool Relay::checkCanLed(bool re)
         Log::Info(result ? PSTR("led can light") : PSTR("led can not light"));
         for (uint8_t ch = 0; ch < channels; ch++)
         {
+#ifdef USE_SHUJI
+            if (config.module_type == Shuji_PWM6)
+            {
+                result &&config.led_type != 0 ? led(ch, bitRead(lastState, ch)) : led(ch, true);
+                continue;
+            }
+#endif
             if (RELAY_LED_PIN[ch] != 99)
             {
                 result &&config.led_type != 0 ? led(ch, bitRead(lastState, ch)) : analogWrite(RELAY_LED_PIN[ch], 0);
@@ -1084,7 +1128,7 @@ void Relay::loadModule(uint8_t module)
             break;
         }
         l = m.io[pos++];
-        if (l > 8)
+        if (l > 16)
         {
             break;
         }

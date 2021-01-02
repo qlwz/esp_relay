@@ -88,13 +88,14 @@ void Dimming::mqttCallback(char *topic, char *payload, char *cmnd)
         uint8_t ch = cmnd[10] - 49;
         if (pwmstartch <= ch)
         {
+            uint8_t pwmch = ch - pwmstartch;
             uint16_t d = atoi(payload);
             if (d < 1)
                 d = 0;
             if (d > 100)
                 d = 100;
-            relay->config.brightness[ch] = d;
-            relay->switchRelay(ch, relay->config.brightness[ch] != 0, true);
+            relay->config.brightness[pwmch] = d;
+            relay->switchRelay(ch, relay->config.brightness[pwmch] != 0, true);
         }
     }
     else if (strlen(cmnd) == 11 && strncmp(cmnd, "color_temp", 10) == 0) // strlen("power1") = 6
@@ -102,13 +103,14 @@ void Dimming::mqttCallback(char *topic, char *payload, char *cmnd)
         uint8_t ch = cmnd[10] - 49;
         if (pwmstartch <= ch)
         {
+            uint8_t pwmch = ch - pwmstartch;
             uint16_t t = atoi(payload);
             if (t < 153)
                 t = 153;
             if (t > 500)
                 t = 500;
-            relay->config.color_temp[ch] = t;
-            relay->switchRelay(ch, relay->config.brightness[ch] != 0, true);
+            relay->config.color_temp[pwmch] = t;
+            relay->switchRelay(ch, relay->config.brightness[pwmch] != 0, true);
         }
     }
 }
@@ -132,11 +134,11 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
         return;
     }
 
-    uint8_t brightness = relay->config.brightness[ch];
+    uint8_t brightness = relay->config.brightness[pwmch];
     if (brightness == 0)
     {
         brightness = 100;
-        relay->config.brightness[ch] = brightness;
+        relay->config.brightness[pwmch] = brightness;
     }
 
     if (PWM_TEMPERATURE_PIN[pwmch] != 99)
@@ -146,7 +148,7 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
         * ct = 153 = 2000K = Warm = CCWW = 00FF
         * ct = 500 = 6500K = Cold = CCWW = FF00
         */
-        uint16_t ct = relay->config.color_temp[ch];
+        uint16_t ct = relay->config.color_temp[pwmch];
         uint16_t my_ct = ct - 153;
         if (my_ct > 347)
         {
@@ -352,12 +354,13 @@ void Dimming::RotaryHandler(void)
     }
     if (Rotary.position != 0)
     {
-        uint8_t ch = relay->channels - 1;
+        uint8_t ch = relay->channels;
+        uint8_t pwmch = ch - pwmstartch;
         bool pressed = !digitalRead(BOTTON_PIN[ch]);
         if (pressed)
         {
             Rotary.changed = 1;
-            int16_t t = relay->config.color_temp[ch];
+            int16_t t = relay->config.color_temp[pwmch];
             t = t + Rotary.position;
             if (t < 153)
             {
@@ -368,12 +371,12 @@ void Dimming::RotaryHandler(void)
                 t = 500;
             }
             Log::Info(PSTR("SetColorTemp:  %d"), Rotary.position);
-            relay->config.color_temp[ch] = t;
-            relay->switchRelay(ch, relay->config.brightness[ch] != 0, true);
+            relay->config.color_temp[pwmch] = t;
+            relay->switchRelay(ch, relay->config.brightness[pwmch] != 0, true);
         }
         else
         {
-            int16_t d = relay->config.brightness[ch];
+            int16_t d = relay->config.brightness[pwmch];
             d = d + Rotary.position;
             if (d < 1)
             {
@@ -384,8 +387,8 @@ void Dimming::RotaryHandler(void)
                 d = 100;
             }
             Log::Info(PSTR("SetBrightness:  %d"), Rotary.position);
-            relay->config.brightness[ch] = d;
-            relay->switchRelay(ch, relay->config.brightness[ch] != 0, true);
+            relay->config.brightness[pwmch] = d;
+            relay->switchRelay(ch, relay->config.brightness[pwmch] != 0, true);
         }
         Rotary.position = 0;
     }
@@ -413,17 +416,18 @@ void Dimming::httpSetBrightness(WebServer *server)
         server->send_P(200, PSTR("application/json"), PSTR("{\"code\":0,\"msg\":\"不支持PWM\"}"));
         return;
     }
+    uint8_t pwmch = ch - pwmstartch;
     if (server->hasArg(F("c")))
     {
         int16_t c = server->arg(F("c")).toInt();
-        relay->config.color_temp[ch] = c;
-        relay->switchRelay(ch, relay->config.brightness[ch] != 0, true);
+        relay->config.color_temp[pwmch] = c;
+        relay->switchRelay(ch, relay->config.brightness[pwmch] != 0, true);
     }
     if (server->hasArg(F("b")))
     {
         int16_t b = server->arg(F("b")).toInt();
-        relay->config.brightness[ch] = b;
-        relay->switchRelay(ch, relay->config.brightness[ch] != 0, true);
+        relay->config.brightness[pwmch] = b;
+        relay->switchRelay(ch, relay->config.brightness[pwmch] != 0, true);
     }
 
     char html[512] = {0};
@@ -441,17 +445,18 @@ void Dimming::httpHtml(WebServer *server)
     char html[512] = {0};
     for (size_t ch = pwmstartch; ch < relay->channels; ch++)
     {
-        if (PWM_TEMPERATURE_PIN[ch - pwmstartch] != 99)
+        uint8_t pwmch = ch - pwmstartch;
+        if (PWM_TEMPERATURE_PIN[pwmch] != 99)
         {
             snprintf_P(html, sizeof(html),
                        PSTR("</td></tr><tr><td>色温%d</td><td><input type='range' min='153' max='500' id='color%d' value='%d' onchange='ajaxPost(\"/set_brightness\", \"ch=%d&c=\"+this.value);this.nextSibling.nextSibling.innerHTML=this.value'/>&nbsp;<span>%d</span>"),
-                       ch - pwmstartch + 1, ch + 1, relay->config.color_temp[ch], ch + 1, relay->config.color_temp[ch]);
+                       pwmch + 1, ch + 1, relay->config.color_temp[pwmch], ch + 1, relay->config.color_temp[pwmch]);
             server->sendContent_P(html);
         }
 
         snprintf_P(html, sizeof(html),
                    PSTR("</td></tr><tr><td>亮度%d</td><td><input type='range' min='0' max='100' id='brightness%d' value='%d' onchange='ajaxPost(\"/set_brightness\", \"ch=%d&b=\"+this.value);this.nextSibling.nextSibling.innerHTML=this.value+\"%\"'/>&nbsp;<span>%d%</span>"),
-                   ch - pwmstartch + 1, ch + 1, relay->config.brightness[ch], ch + 1, relay->config.brightness[ch]);
+                   pwmch + 1, ch + 1, relay->config.brightness[pwmch], ch + 1, relay->config.brightness[pwmch]);
         server->sendContent_P(html);
     }
 }
@@ -535,13 +540,14 @@ String Dimming::httpGetStatus(WebServer *server)
     String data;
     for (size_t ch = pwmstartch; ch < relay->channels; ch++)
     {
-        if (PWM_TEMPERATURE_PIN[ch - pwmstartch] != 99)
+        uint8_t pwmch = ch - pwmstartch;
+        if (PWM_TEMPERATURE_PIN[pwmch] != 99)
         {
             data += ",\"color" + String(ch + 1) + "\":";
-            data += String(relay->config.color_temp[ch]);
+            data += String(relay->config.color_temp[pwmch]);
         }
         data += ",\"brightness" + String(ch + 1) + "\":";
-        data += String(relay->config.brightness[ch]);
+        data += String(relay->config.brightness[pwmch]);
     }
     return data.substring(1);
 }

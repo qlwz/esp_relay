@@ -944,28 +944,29 @@ void Relay::cheackButton(uint8_t ch)
     else if (millis() - buttonTimingStart[ch] >= BUTTON_DEBOUNCE_TIME)
     {
 #ifdef USE_DIMMING
-        if (dimming && ch >= dimming->pwmstartch && !currentState && bitRead(dimmingState[ch - dimming->pwmstartch], 1)) // 如果低电平 并且进入调光模式
+        uint8_t pwmch = ch - dimming->pwmstartch;
+        if (dimming && ch >= dimming->pwmstartch && !currentState && bitRead(dimmingState[pwmch], 1)) // 如果低电平 并且进入调光模式
         {
             if (millis() - 100 > lastTime[ch])
             {
-                if (!bitRead(dimmingState[ch - dimming->pwmstartch], 0))
+                if (!bitRead(dimmingState[pwmch], 0))
                 {
-                    if (config.brightness[ch] < 100)
+                    if (config.brightness[pwmch] < 100)
                     {
-                        config.brightness[ch]++;
+                        config.brightness[pwmch]++;
                     }
                 }
                 else
                 {
-                    if (config.brightness[ch] > 2)
+                    if (config.brightness[pwmch] > 2)
                     {
-                        config.brightness[ch]--;
+                        config.brightness[pwmch]--;
                     }
                 }
-                //Log::Info(PSTR("brightness %d : %d"), ch + 1, config.brightness[ch]);
+                //Log::Info(PSTR("brightness %d : %d"), ch + 1, config.brightness[pwmch]);
                 switchRelay(ch, true, true);
                 lastTime[ch] = millis();
-                bitSet(dimmingState[ch - dimming->pwmstartch], 2);
+                bitSet(dimmingState[pwmch], 2);
             }
         }
 #endif
@@ -981,24 +982,25 @@ void Relay::cheackButton(uint8_t ch)
 #ifdef USE_DIMMING
             if (dimming && ch >= dimming->pwmstartch)
             {
+                uint8_t pwmch = ch - dimming->pwmstartch;
                 if (!currentState) // 如果未开灯，低电平亮， 如果已开灯，高电平关
                 {
                     if (!bitRead(lastState, ch))
                     {
-                        if (PWM_TEMPERATURE_PIN[ch - dimming->pwmstartch] != 99 && millis() - colorOffTime[ch] < (5 * 1000)) // 关灯少于5秒
+                        if (PWM_TEMPERATURE_PIN[pwmch] != 99 && millis() - colorOffTime[pwmch] < (5 * 1000)) // 关灯少于5秒
                         {
-                            config.color_index[ch] = (config.color_index[ch] + 1) % 3;
-                            if (config.color_index[ch] == 1)
+                            config.color_index[pwmch] = (config.color_index[pwmch] + 1) % 3;
+                            if (config.color_index[pwmch] == 1)
                             {
-                                config.color_temp[ch] = 500;
+                                config.color_temp[pwmch] = 500;
                             }
-                            else if (config.color_index[ch] == 2)
+                            else if (config.color_index[pwmch] == 2)
                             {
-                                config.color_temp[ch] = 153;
+                                config.color_temp[pwmch] = 153;
                             }
                             else
                             {
-                                config.color_temp[ch] = 326;
+                                config.color_temp[pwmch] = 326;
                             }
                         }
                         switchRelay(ch, true, true);
@@ -1006,35 +1008,35 @@ void Relay::cheackButton(uint8_t ch)
                     }
                     else
                     {
-                        if (config.brightness[ch] >= 100) // 切换调光模式
+                        if (config.brightness[pwmch] >= 100) // 切换调光模式
                         {
-                            bitSet(dimmingState[ch - dimming->pwmstartch], 0);
+                            bitSet(dimmingState[pwmch], 0);
                         }
-                        if (config.brightness[ch] <= 10)
+                        if (config.brightness[pwmch] <= 10)
                         {
-                            bitClear(dimmingState[ch - dimming->pwmstartch], 0);
+                            bitClear(dimmingState[pwmch], 0);
                         }
 
                         lastTime[ch] = millis() + 900; // 首次1000毫秒才进入调光模式
-                        //bitClear(dimmingState[ch - dimming->pwmstartch], 0); // 每次进入亮度增加模式
-                        bitSet(dimmingState[ch - dimming->pwmstartch], 1);   // 调光模式
-                        bitClear(dimmingState[ch - dimming->pwmstartch], 2); // 重置为未调光状态
+                        //bitClear(dimmingState[pwmch], 0); // 每次进入亮度增加模式
+                        bitSet(dimmingState[pwmch], 1);   // 调光模式
+                        bitClear(dimmingState[pwmch], 2); // 重置为未调光状态
                     }
                 }
                 else
                 {
-                    if (bitRead(dimmingState[ch - dimming->pwmstartch], 2)) // 进入调光模式就进行切换
+                    if (bitRead(dimmingState[pwmch], 2)) // 进入调光模式就进行切换
                     {
-                        bitWrite(dimmingState[ch - dimming->pwmstartch], 0, !bitRead(dimmingState[ch - dimming->pwmstartch], 0));
+                        bitWrite(dimmingState[pwmch], 0, !bitRead(dimmingState[pwmch], 0));
                     }
-                    if (bitRead(dimmingState[ch - dimming->pwmstartch], 1) && !bitRead(dimmingState[ch - dimming->pwmstartch], 2))
+                    if (bitRead(dimmingState[pwmch], 1) && !bitRead(dimmingState[pwmch], 2))
                     {
                         switchRelay(ch, false, true);
-                        colorOffTime[ch] = millis();
+                        colorOffTime[pwmch] = millis();
                         lastTime[ch] = millis();
                     }
-                    bitClear(dimmingState[ch - dimming->pwmstartch], 1);
-                    bitClear(dimmingState[ch - dimming->pwmstartch], 2);
+                    bitClear(dimmingState[pwmch], 1);
+                    bitClear(dimmingState[pwmch], 2);
                 }
             }
             else if (dimming && ch >= dimming->pwmstartch && ROT_PIN[0] != 99)
@@ -1194,10 +1196,11 @@ void Relay::reportChannel(uint8_t ch)
 #ifdef USE_DIMMING
     if (dimming && ch >= dimming->pwmstartch)
     {
-        Mqtt::publish(Mqtt::getStatTopic(F("brightness")) + (ch + 1), String(config.brightness[ch]).c_str(), globalConfig.mqtt.retain);
-        if (PWM_TEMPERATURE_PIN[ch - dimming->pwmstartch] != 99)
+        uint8_t pwmch = ch - dimming->pwmstartch;
+        Mqtt::publish(Mqtt::getStatTopic(F("brightness")) + (ch + 1), String(config.brightness[pwmch]).c_str(), globalConfig.mqtt.retain);
+        if (PWM_TEMPERATURE_PIN[pwmch] != 99)
         {
-            Mqtt::publish(Mqtt::getStatTopic(F("color_temp")) + (ch + 1), String(config.color_temp[ch]).c_str(), globalConfig.mqtt.retain);
+            Mqtt::publish(Mqtt::getStatTopic(F("color_temp")) + (ch + 1), String(config.color_temp[pwmch]).c_str(), globalConfig.mqtt.retain);
         }
     }
 #endif

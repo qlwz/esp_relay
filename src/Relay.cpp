@@ -107,7 +107,7 @@ void Relay::init()
 
     checkCanLed(true);
 #ifdef USE_SHUJI
-    if (config.module_type == Shuji_PWM6)
+    if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
     {
         sr.set(7, true);
         sr.set(15, true);
@@ -549,7 +549,7 @@ void Relay::httpHtml(WebServer *server)
 
     server->sendContent_P(
         PSTR("<script type='text/javascript'>"
-             "function setDataSub(data,key){if(key.substr(0,5)=='relay'){var t=id(key);var v=data[key];t.setAttribute('class',v==1?'btn-success':'btn-info');t.innerHTML=v==1?'开':'关';return true}return false}"));
+             "function setDataSub(data,key){if(key.substr(0,10)=='brightness'||key.substr(0,5)=='color'){var t=id(key);var v=data[key];t.value=v;t.nextSibling.nextSibling.innerHTML=v+(key.substr(0,10)=='brightness'?\"%\":\"\");return true}else if(key.substr(0,5)=='relay'){var t=id(key);var v=data[key];t.setAttribute('class',v==1?'btn-success':'btn-info');t.innerHTML=v==1?'开':'关';return true}return false}"));
 
     snprintf_P(html, sizeof(html), PSTR("id('module_type').value=%d;setRadioValue('power_on_state', '%d');setRadioValue('power_mode', '%d');setRadioValue('switch_mode', '%d');"),
                config.module_type, config.power_on_state, config.power_mode, config.switch_mode);
@@ -782,7 +782,7 @@ void Relay::ledPWM(uint8_t ch, bool isOn)
                 }
             }
             ledTicker.detach();
-            Log::Info(PSTR("ledTicker detach"));
+            // Log::Info(PSTR("ledTicker detach"));
         }
     }
     else
@@ -790,7 +790,7 @@ void Relay::ledPWM(uint8_t ch, bool isOn)
         if (!ledTicker.active())
         {
             ledTicker.attach_ms(config.led_time, []() { ((Relay *)module)->ledTickerHandle(); });
-            Log::Info(PSTR("ledTicker active"));
+            // Log::Info(PSTR("ledTicker active"));
         }
     }
 }
@@ -803,7 +803,7 @@ void Relay::led(uint8_t ch, bool isOn)
     }
 
 #ifdef USE_SHUJI
-    if (config.module_type == Shuji_PWM6)
+    if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
     {
         if (ch < 6)
         {
@@ -853,14 +853,14 @@ bool Relay::checkCanLed(bool re)
         if ((!result || config.led_type != 2) && ledTicker.active())
         {
             ledTicker.detach();
-            Log::Info(PSTR("ledTicker detach2"));
+            // Log::Info(PSTR("ledTicker detach2"));
         }
         Relay::canLed = result;
         Log::Info(result ? PSTR("led can light") : PSTR("led can not light"));
         for (uint8_t ch = 0; ch < channels; ch++)
         {
 #ifdef USE_SHUJI
-            if (config.module_type == Shuji_PWM6)
+            if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
             {
                 result &&config.led_type != 0 ? led(ch, bitRead(lastState, ch)) : led(ch, true);
                 continue;
@@ -944,9 +944,9 @@ void Relay::cheackButton(uint8_t ch)
     else if (millis() - buttonTimingStart[ch] >= BUTTON_DEBOUNCE_TIME)
     {
 #ifdef USE_DIMMING
-        uint8_t pwmch = ch - dimming->pwmstartch;
-        if (dimming && ch >= dimming->pwmstartch && !currentState && bitRead(dimmingState[pwmch], 1)) // 如果低电平 并且进入调光模式
+        if (dimming && ch >= dimming->pwmstartch && !currentState && bitRead(dimmingState[ch - dimming->pwmstartch], 1)) // 如果低电平 并且进入调光模式
         {
+            uint8_t pwmch = ch - dimming->pwmstartch;
             if (millis() - 100 > lastTime[ch])
             {
                 if (!bitRead(dimmingState[pwmch], 0))

@@ -22,6 +22,7 @@ volatile byte pulseCount = 0;
 
 // 当前温度
 float currentTemperature = DEVICE_DISCONNECTED_C;
+int flow = 0;
 bool weileLastState = 0;
 unsigned long weileRunTime = 0;
 unsigned long weileStopTime = 0;
@@ -35,6 +36,14 @@ ICACHE_RAM_ATTR void pulseCounter1()
 
 unsigned long previousTime = 0;
 unsigned long isflowOn = false;
+
+void sendMqtt()
+{
+    char tmpSensor[50];
+    sprintf(tmpSensor, PSTR("{\"flow\":\"%s\", \"temperature\":%s}"), isflowOn ? "on" : "off", String(currentTemperature).c_str());
+    Mqtt::publish(Mqtt::getStatTopic(F("sensor")), tmpSensor, globalConfig.mqtt.retain);
+}
+
 ICACHE_RAM_ATTR void checkFlow()
 {
     unsigned long elapsedTime = millis() - previousTime;
@@ -61,7 +70,7 @@ ICACHE_RAM_ATTR void checkFlow()
             {
                 isflowOn = true;
                 Log::Info(PSTR("send flow on"));
-                Mqtt::publish(Mqtt::getStatTopic(F("flow")), "on", globalConfig.mqtt.retain);
+                sendMqtt();
             }
         }
         else
@@ -83,7 +92,7 @@ ICACHE_RAM_ATTR void checkFlow()
             {
                 isflowOn = false;
                 Log::Info(PSTR("send flow off"));
-                Mqtt::publish(Mqtt::getStatTopic(F("flow")), "off", globalConfig.mqtt.retain);
+                sendMqtt();
             }
         }
         //Log::Info("Flow: %d %d", pulseCount, flowCount);
@@ -113,7 +122,7 @@ void getTemperatures()
         Log::Info("temp: %f, %f", temp1, temp2);
         currentTemperature = temp;
 
-        Mqtt::publish(Mqtt::getStatTopic(F("temp")), String(currentTemperature).c_str(), globalConfig.mqtt.retain);
+        sendMqtt();
     }
     if (currentTemperature >= 40.0f && bitRead(((Relay *)module)->lastState, RELAY_CH)) // 大于40°停机
     {
@@ -182,8 +191,11 @@ bool callModule_WeiLe(uint8_t function)
     case FUNC_EVERY_SECOND:
         if (perSecond % 6 == 0) // 6秒读取一次温度
         {
-
             getTemperatures();
+        }
+        if (((Relay *)module)->config.report_interval > 0 && (perSecond % ((Relay *)module)->config.report_interval) == 0)
+        {
+            sendMqtt();
         }
         break;
     case FUNC_LOOP:

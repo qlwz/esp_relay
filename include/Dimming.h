@@ -7,10 +7,14 @@
 
 #ifdef ESP8266
 #define PWM_RANGE 1023
+#ifndef PWM_SHIFT
 #define PWM_SHIFT 1
+#endif
 #else
 #define PWM_RANGE 4095
+#ifndef PWM_SHIFT
 #define PWM_SHIFT 4
+#endif
 #endif
 
 class Dimming

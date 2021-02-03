@@ -5,8 +5,14 @@
 
 #define MAX_GPIO_PIN 50 // Number of supported GPIO
 
-#define MAX_RELAY_NUM 8
-#define MAX_PWM_NUM 8
+
+#ifndef MAX_RELAY_NUM
+#define MAX_RELAY_NUM 4
+#endif
+
+#ifndef MAX_PWM_NUM
+#define MAX_PWM_NUM 4
+#endif
 
 #ifndef USE_DIMMING
 #undef MAX_PWM_NUM
@@ -49,7 +55,9 @@ enum SupportedModules
     CH1_PWM1,
     Yeelight,
 #ifdef USE_SHUJI
-    Shuji_PWM6,
+    Shuji_CH6_PWM6,
+    Shuji_CH12,
+    Shuji_CH5,
 #endif
 #endif
 
@@ -128,7 +136,7 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
         "4路调光",            // 4 PWM
         1, 1, 2,              // LED IO
         3, 4, 36, 39, 34, 35, // BUTTON IO
-                              // 4, 4, 32, 33, 25, 26, // RELAY LED IO
+        4, 4, 32, 33, 25, 26, // RELAY LED IO
 
         6, 4, 22 + 50, 21 + 50, 19 + 50, 18 + 50, // PWM1 IO
 
@@ -173,12 +181,32 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
     },
 #ifdef USE_SHUJI
     {
-        "书记十二路",                                              // 6 Channel
+        "书记6路调光",                                              // 6 Channel
         1, 1, 2 + 50,                                              // LED IO
         2, 6, 12, 12, 12, 12, 12, 12,                              // RELAY IO
         3, 12, 36, 39, 34, 35, 32, 33, 25, 26, 27, 14, 15, 0,      // BUTTON IO
         4, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY LED IO
         6, 6, 23 + 50, 22 + 50, 21 + 50, 19 + 50, 18 + 50, 5 + 50, // PWM1 IO
+
+        99 // END
+    },
+    {
+        "书记12路开关",                                             // 12 Channel
+        1, 1, 2 + 50,                                              // LED IO
+        2, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY IO
+        3, 12, 36, 39, 34, 35, 32, 33, 25, 26, 27, 14, 15, 0,      // BUTTON IO
+        4, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY LED IO
+
+        99 // END
+    },
+    {
+        "1开关&4路调光",            // 4 PWM
+        1, 1, 2,              // LED IO
+        2, 1, 23,     // RELAY IO
+        3, 5, 12, 36, 39, 34, 35, // BUTTON IO
+        4, 5, 12, 32, 33, 25, 26, // RELAY LED IO
+
+        6, 4, 22 + 50, 21 + 50, 19 + 50, 18 + 50, // PWM1 IO
 
         99 // END
     },

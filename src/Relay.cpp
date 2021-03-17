@@ -25,7 +25,7 @@ uint8_t ROT_PIN[2];
 #endif
 
 #ifdef USE_SHUJI
-ShiftRegister74HC595<2> sr(4, 17, 16);
+ShiftRegister74HC595<2> *sr = NULL;
 #endif
 
 #pragma region 继承
@@ -44,6 +44,20 @@ void Relay::init()
     {
         Led::init(LED_PIN > 50 ? LED_PIN - 50 : LED_PIN, LED_PIN > 50 ? LOW : HIGH);
     }
+
+#ifdef USE_SHUJI
+    if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
+    {
+        sr = new ShiftRegister74HC595<2>(4, 17, 16);
+        sr->set(7, true);
+        sr->set(15, true);
+    }
+    else if (config.module_type == Shuji_CH6)
+    {
+        pinMode(18, OUTPUT);
+        digitalWrite(18, HIGH);
+    }
+#endif
 
 #ifdef USE_RCSWITCH
     if (RFRECV_PIN != 99)
@@ -106,13 +120,6 @@ void Relay::init()
     }
 
     checkCanLed(true);
-#ifdef USE_SHUJI
-    if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
-    {
-        sr.set(7, true);
-        sr.set(15, true);
-    }
-#endif
 }
 
 bool Relay::moduleLed()
@@ -805,15 +812,12 @@ void Relay::led(uint8_t ch, bool isOn)
 #ifdef USE_SHUJI
     if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
     {
-        if (ch < 6)
-        {
-            ch += 1;
-        }
-        else
-        {
-            ch += 3;
-        }
-        sr.set(ch, !isOn);
+        sr->set(ch < 6 ? ch + 1 : ch + 3, !isOn);
+        return;
+    }
+    else if (config.module_type == Shuji_CH6)
+    {
+        digitalWrite(RELAY_LED_PIN[ch], isOn ? HIGH : LOW);
         return;
     }
 #endif
@@ -857,12 +861,29 @@ bool Relay::checkCanLed(bool re)
         }
         Relay::canLed = result;
         Log::Info(result ? PSTR("led can light") : PSTR("led can not light"));
+#ifdef USE_SHUJI
+        if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
+        {
+            sr->set(7, result);
+            sr->set(15, result);
+        }
+        else if (config.module_type == Shuji_CH6)
+        {
+            pinMode(18, OUTPUT);
+            digitalWrite(18, result && config.led_type != 0 ? HIGH : LOW);
+        }
+#endif
         for (uint8_t ch = 0; ch < channels; ch++)
         {
 #ifdef USE_SHUJI
             if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
             {
                 result &&config.led_type != 0 ? led(ch, bitRead(lastState, ch)) : led(ch, true);
+                continue;
+            }
+            else if (config.module_type == Shuji_CH6)
+            {
+                digitalWrite(RELAY_LED_PIN[ch], result && config.led_type != 0 && bitRead(lastState, ch) ? HIGH : LOW);
                 continue;
             }
 #endif
@@ -1190,6 +1211,9 @@ void Relay::reportPower()
 
 void Relay::reportChannel(uint8_t ch)
 {
+    if (!bitRead(Config::statusFlag, 1)){
+        return;
+    }
     powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
     Mqtt::publish(powerStatTopic, bitRead(lastState, ch) ? "on" : "off", globalConfig.mqtt.retain);
 

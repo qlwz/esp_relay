@@ -81,7 +81,7 @@ void Dimming::loadPWM(uint8_t ch, uint8_t pin)
     current_color[ch] = pwm_invert ? 255 : 0;
 }
 
-void Dimming::mqttCallback(char *topic, char *payload, char *cmnd)
+bool Dimming::mqttCallback(char *topic, char *payload, char *cmnd)
 {
     if (strlen(cmnd) == 11 && strncmp(cmnd, "brightness", 10) == 0) // strlen("power1") = 6
     {
@@ -90,12 +90,18 @@ void Dimming::mqttCallback(char *topic, char *payload, char *cmnd)
         {
             uint8_t pwmch = ch - pwmstartch;
             uint16_t d = atoi(payload);
+            if (d > 1000) // 快速调光
+            {
+                isFast = true;
+                d = d - 1000;
+            }
             if (d < 1)
                 d = 0;
             if (d > 100)
                 d = 100;
             relay->config.brightness[pwmch] = d;
             relay->switchRelay(ch, relay->config.brightness[pwmch] != 0, true);
+            return true;
         }
     }
     else if (strlen(cmnd) == 11 && strncmp(cmnd, "color_temp", 10) == 0) // strlen("power1") = 6
@@ -105,14 +111,55 @@ void Dimming::mqttCallback(char *topic, char *payload, char *cmnd)
         {
             uint8_t pwmch = ch - pwmstartch;
             uint16_t t = atoi(payload);
+            if (t > 1000) // 快速调温
+            {
+                isFast = true;
+                t = t - 1000;
+            }
             if (t < 153)
                 t = 153;
             if (t > 500)
                 t = 500;
             relay->config.color_temp[pwmch] = t;
             relay->switchRelay(ch, relay->config.brightness[pwmch] != 0, true);
+            return true;
         }
     }
+    else if (strlen(cmnd) == 5 && strncmp(cmnd, "plus", 4) == 0) // strlen("power1") = 6
+    {
+        uint8_t ch = cmnd[4] - 49;
+        if (pwmstartch <= ch)
+        {
+            uint8_t pwmch = ch - pwmstartch;
+            bitClear(state[pwmch], 0); // 增加模式
+            bitSet(state[pwmch], 1);   // 调光模式
+            bitClear(state[pwmch], 2); // 重置为未调光状态
+            return true;
+        }
+    }
+    else if (strlen(cmnd) == 6 && strncmp(cmnd, "minus", 5) == 0) // strlen("power1") = 6
+    {
+        uint8_t ch = cmnd[5] - 49;
+        if (pwmstartch <= ch)
+        {
+            uint8_t pwmch = ch - pwmstartch;
+            bitSet(state[pwmch], 0);   // 减少模式
+            bitSet(state[pwmch], 1);   // 调光模式
+            bitClear(state[pwmch], 2); // 重置为未调光状态
+            return true;
+        }
+    }
+    else if (strlen(cmnd) == 5 && strncmp(cmnd, "stop", 4) == 0) // strlen("power1") = 6
+    {
+        uint8_t ch = cmnd[4] - 49;
+        if (pwmstartch <= ch)
+        {
+            uint8_t pwmch = ch - pwmstartch;
+            bitClear(state[pwmch], 1); // 调光模式
+            return true;
+        }
+    }
+    return false;
 }
 
 void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
@@ -235,6 +282,11 @@ IRAM_ATTR void Dimming::animate(void)
             }
         }
 
+        if (isFast) // 是否快速调光
+        {
+            current_color[i] = target_color[i];
+        }
+
         //Log::Info(PSTR("a%d %d %d"), i, target_color[i], current_color[i]);
 
 #ifdef ESP8266
@@ -250,6 +302,10 @@ IRAM_ATTR void Dimming::animate(void)
 #else
         ledcWrite(i, current_color[i]);
 #endif
+    }
+    if (isFast) // 是否快速调光
+    {
+        isFast = false;
     }
 
     for (uint8_t i = 0; i < (sizeof(current_color) / sizeof(current_color[0])); i++)
@@ -438,6 +494,36 @@ void Dimming::httpSetBrightness(WebServer *server)
 IRAM_ATTR void Dimming::loop()
 {
     RotaryLoop();
+
+    if (millis() - 100 > stateTime)
+    {
+        for (size_t ch = pwmstartch; ch < relay->channels; ch++)
+        {
+            uint8_t pwmch = ch - pwmstartch;
+            if (!bitRead(state[pwmch], 1))
+            {
+                continue;
+            }
+            if (bitRead(state[pwmch], 0))
+            {
+                if (relay->config.brightness[pwmch] > 2)
+                {
+                    relay->config.brightness[pwmch]--;
+                }
+            }
+            else
+            {
+                if (relay->config.brightness[pwmch] < 100)
+                {
+                    relay->config.brightness[pwmch]++;
+                }
+            }
+            //Log::Info(PSTR("brightness %d : %d"), ch + 1, config.brightness[pwmch]);
+            relay->switchRelay(ch, true, true);
+            bitSet(state[pwmch], 2);
+        }
+        stateTime = millis();
+    }
 }
 
 void Dimming::httpHtml(WebServer *server)

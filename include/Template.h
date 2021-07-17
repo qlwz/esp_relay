@@ -52,6 +52,7 @@ enum SupportedModules
     ji_CH4,
     ji_CH8,
 #endif
+    Kong,
 #else
     PMW4,
     CH2_PWM,
@@ -152,6 +153,14 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
         99 // END
     },
 #endif
+    {
+        "孔总",  // 3 Channel (ESP8285)
+        1, 1, 13 + 50,   // LED IO
+        2, 3, 12, 5, 4, // RELAY IO
+        3, 3, 0, 9, 10,  // BUTTON IO
+
+        99 // END
+    },
 #else
     {
         "4路调光",            // 4 PWM

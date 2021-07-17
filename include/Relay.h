@@ -6,7 +6,8 @@
 #include "RelayConfig.pb.h"
 #include "Template.h"
 
-#define MODULE_CFG_VERSION 1001 //1001 - 1500
+#define RELAY_CFG_VERSION 1001 //1001 - 1500
+#define RELAY_CONFIG "/relay.config"
 
 #define MAX_STUDY_RECEIVER_NUM 10 // 遥控最大学习数
 
@@ -73,6 +74,8 @@ public:
 
 #ifdef USE_DIMMING
     Dimming *dimming = NULL;
+    char brightnessStatTopic[100];
+    char color_tempStatTopic[100];
 #endif
 
     void init();
@@ -89,7 +92,7 @@ public:
     void resetConfig();
     void saveConfig(bool isEverySecond);
 
-    void mqttCallback(char *topic, char *payload, char *cmnd);
+    bool mqttCallback(char *topic, char *payload, char *cmnd);
     void mqttConnected();
     void mqttDiscovery(bool isEnable = true);
 

@@ -88,6 +88,8 @@ void Relay::init()
     {
         dimming = new Dimming();
         dimming->init(this);
+        strcpy(brightnessStatTopic, Mqtt::getStatTopic(F("brightness1")).c_str());
+        strcpy(color_tempStatTopic, Mqtt::getStatTopic(F("color_temp1")).c_str());
     }
 #endif
 
@@ -186,7 +188,14 @@ void Relay::perSecondDo()
 
 void Relay::readConfig()
 {
-    Config::moduleReadConfig(MODULE_CFG_VERSION, sizeof(RelayConfigMessage), RelayConfigMessage_fields, &config);
+    bool isOk = false;
+#ifdef USE_UFILESYS
+    isOk = Config::FSReadConfig(RELAY_CONFIG, RELAY_CFG_VERSION, sizeof(RelayConfigMessage), RelayConfigMessage_fields, &config, configCrc);
+#endif
+    if (!isOk)
+    {
+        Config::moduleReadConfig(RELAY_CFG_VERSION, sizeof(RelayConfigMessage), RelayConfigMessage_fields, &config);
+    }
     if (config.led_light == 0)
     {
         config.led_light = 100;
@@ -237,13 +246,23 @@ void Relay::resetConfig()
 
 void Relay::saveConfig(bool isEverySecond)
 {
-    Config::moduleSaveConfig(MODULE_CFG_VERSION, RelayConfigMessage_size, RelayConfigMessage_fields, &config);
+#ifdef USE_UFILESYS
+    if (Config::FSSaveConfig(RELAY_CONFIG, RELAY_CFG_VERSION, RelayConfigMessage_size, RelayConfigMessage_fields, &config, configCrc))
+    {
+        //globalConfig.cfg_version = 0;
+        //globalConfig.module_crc = 0;
+        //globalConfig.module_cfg.size = 0;
+        //memset(globalConfig.module_cfg.bytes, 0, 500);
+        //return;
+    }
+#endif
+    Config::moduleSaveConfig(RELAY_CFG_VERSION, RelayConfigMessage_size, RelayConfigMessage_fields, &config);
 }
 #pragma endregion
 
 #pragma region MQTT
 
-void Relay::mqttCallback(char *topic, char *payload, char *cmnd)
+bool Relay::mqttCallback(char *topic, char *payload, char *cmnd)
 {
     if (strlen(cmnd) == 6 && strncmp(cmnd, "power", 5) == 0) // strlen("power1") = 6
     {
@@ -251,23 +270,36 @@ void Relay::mqttCallback(char *topic, char *payload, char *cmnd)
         if (ch < channels)
         {
             switchRelay(ch, (strcmp(payload, "on") == 0 ? true : (strcmp(payload, "off") == 0 ? false : !bitRead(lastState, ch))), true);
-            return;
+            return true;
         }
     }
     else if (strcmp(cmnd, "report") == 0)
     {
         reportPower();
+        return true;
     }
 #ifdef USE_DIMMING
     else if (dimming)
     {
-        dimming->mqttCallback(topic, payload, cmnd);
+        bool result = dimming->mqttCallback(topic, payload, cmnd);
+        if (result)
+        {
+            return true;
+        }
     }
 #endif
+    return false;
 }
 
 void Relay::mqttConnected()
 {
+#ifdef USE_DIMMING
+    if (PWM_BRIGHTNESS_PIN[0] != 99)
+    {
+        strcpy(brightnessStatTopic, Mqtt::getStatTopic(F("brightness1")).c_str());
+        strcpy(color_tempStatTopic, Mqtt::getStatTopic(F("color_temp1")).c_str());
+    }
+#endif
     strcpy(powerStatTopic, Mqtt::getStatTopic(F("power1")).c_str());
     if (globalConfig.mqtt.discovery)
     {
@@ -970,18 +1002,18 @@ void Relay::cheackButton(uint8_t ch)
             uint8_t pwmch = ch - dimming->pwmstartch;
             if (millis() - 100 > lastTime[ch])
             {
-                if (!bitRead(dimmingState[pwmch], 0))
-                {
-                    if (config.brightness[pwmch] < 100)
-                    {
-                        config.brightness[pwmch]++;
-                    }
-                }
-                else
+                if (bitRead(dimmingState[pwmch], 0))
                 {
                     if (config.brightness[pwmch] > 2)
                     {
                         config.brightness[pwmch]--;
+                    }
+                }
+                else
+                {
+                    if (config.brightness[pwmch] < 100)
+                    {
+                        config.brightness[pwmch]++;
                     }
                 }
                 //Log::Info(PSTR("brightness %d : %d"), ch + 1, config.brightness[pwmch]);
@@ -1211,7 +1243,8 @@ void Relay::reportPower()
 
 void Relay::reportChannel(uint8_t ch)
 {
-    if (!bitRead(Config::statusFlag, 1)){
+    if (!bitRead(Config::statusFlag, 1))
+    {
         return;
     }
     powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
@@ -1220,11 +1253,13 @@ void Relay::reportChannel(uint8_t ch)
 #ifdef USE_DIMMING
     if (dimming && ch >= dimming->pwmstartch)
     {
+        brightnessStatTopic[strlen(brightnessStatTopic) - 1] = ch + 49; // 48 + 1 + ch
         uint8_t pwmch = ch - dimming->pwmstartch;
-        Mqtt::publish(Mqtt::getStatTopic(F("brightness")) + (ch + 1), String(config.brightness[pwmch]).c_str(), globalConfig.mqtt.retain);
+        Mqtt::publish(brightnessStatTopic, String(config.brightness[pwmch]).c_str(), globalConfig.mqtt.retain);
         if (PWM_TEMPERATURE_PIN[pwmch] != 99)
         {
-            Mqtt::publish(Mqtt::getStatTopic(F("color_temp")) + (ch + 1), String(config.color_temp[pwmch]).c_str(), globalConfig.mqtt.retain);
+            color_tempStatTopic[strlen(color_tempStatTopic) - 1] = ch + 49; // 48 + 1 + ch
+            Mqtt::publish(color_tempStatTopic, String(config.color_temp[pwmch]).c_str(), globalConfig.mqtt.retain);
         }
     }
 #endif

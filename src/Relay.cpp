@@ -5,9 +5,6 @@
 #ifdef USE_HOMEKIT
 #include "HomeKit.h"
 #endif
-#ifdef USE_SHUJI
-#include <ShiftRegister74HC595.h>
-#endif
 
 uint8_t LED_PIN = 99;
 uint8_t RFRECV_PIN = 99;
@@ -25,7 +22,12 @@ uint8_t ROT_PIN[2];
 #endif
 
 #ifdef USE_SHUJI
+#include <ShiftRegister74HC595.h>
+#include <Wire.h>
+#include <SparkFunSX1509.h>
+
 ShiftRegister74HC595<2> *sr = NULL;
+SX1509 *sx = NULL;
 #endif
 
 #pragma region 继承
@@ -56,6 +58,17 @@ void Relay::init()
     {
         pinMode(18, OUTPUT);
         digitalWrite(18, HIGH);
+    }
+    else if (config.module_type == Shuji_PWM6)
+    {
+        sx = new SX1509();
+        Wire.setPins(27, 14);
+        sx->begin(0x3E);
+
+        sx->pinMode(7, OUTPUT);
+        sx->digitalWrite(7, HIGH);
+        sx->pinMode(15, OUTPUT);
+        sx->digitalWrite(15, HIGH);
     }
 #endif
 
@@ -119,6 +132,27 @@ void Relay::init()
             switchRelay(ch, config.power_on_state == 1, false); // 开关通电时闭合
         }
     }
+
+#ifdef USE_SHUJI
+    if (config.module_type == Shuji_PWM6)
+    {
+        uint8_t b[6] = {0, 1, 2, 8, 9, 10};
+        uint8_t l[6] = {4, 5, 6, 12, 13, 14};
+        for (uint8_t ch = 0; ch < 6; ch++)
+        {
+            RELAY_LED_PIN[ch] = l[ch];
+            BOTTON_PIN[ch] = b[ch];
+
+            sx->pinMode(RELAY_LED_PIN[ch], OUTPUT); // LED
+
+            sx->pinMode(BOTTON_PIN[ch], INPUT_PULLUP);
+            if (!sx->digitalRead(BOTTON_PIN[ch]))
+            {
+                buttonStateFlag[ch] |= DEBOUNCED_STATE | UNSTABLE_STATE;
+            }
+        }
+    }
+#endif
 
     checkCanLed(true);
 }
@@ -851,6 +885,11 @@ void Relay::led(uint8_t ch, bool isOn)
         digitalWrite(RELAY_LED_PIN[ch], isOn ? HIGH : LOW);
         return;
     }
+    else if (config.module_type == Shuji_PWM6)
+    {
+        sx->digitalWrite(RELAY_LED_PIN[ch], isOn);
+        return;
+    }
 #endif
 
     if (config.led_type == 1)
@@ -903,11 +942,16 @@ bool Relay::checkCanLed(bool re)
             pinMode(18, OUTPUT);
             digitalWrite(18, result && config.led_type != 0 ? HIGH : LOW);
         }
+        else if (config.module_type == Shuji_PWM6)
+        {
+            sx->digitalWrite(7, result);
+            sx->digitalWrite(15, result);
+        }
 #endif
         for (uint8_t ch = 0; ch < channels; ch++)
         {
 #ifdef USE_SHUJI
-            if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
+            if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12 || config.module_type == Shuji_PWM6)
             {
                 result &&config.led_type != 0 ? led(ch, bitRead(lastState, ch)) : led(ch, true);
                 continue;
@@ -987,7 +1031,12 @@ void Relay::checkButton(uint8_t ch)
     {
         return;
     }
+
+#ifdef USE_SHUJI
+    bool currentState = config.module_type == Shuji_PWM6 ? !sx->digitalRead(BOTTON_PIN[ch]) : digitalRead(BOTTON_PIN[ch]);
+#else
     bool currentState = digitalRead(BOTTON_PIN[ch]);
+#endif
     if (currentState != ((buttonStateFlag[ch] & UNSTABLE_STATE) != 0))
     {
         buttonTimingStart[ch] = millis();

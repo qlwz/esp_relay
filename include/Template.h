@@ -63,6 +63,8 @@ enum SupportedModules
     Shuji_CH12,
     Shuji_CH5,
     Shuji_CH6,
+    Shuji_CH6_PWM3,
+    Shuji_PWM6,
 #endif
 #endif
 
@@ -246,6 +248,27 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
         2, 6, 12, 12, 12, 12, 12, 12,     // RELAY IO
         3, 6, 36, 39, 34, 35, 32, 33,      // BUTTON IO
         4, 6, 25, 26, 27, 14, 4, 5,     // RELAY LED IO
+
+        99 // END
+    },
+    {
+        "书记3路双色",                                              // 6 Channel
+        1, 1, 2 + 50,                                              // LED IO
+        2, 6, 12, 12, 12, 12, 12, 12,                              // RELAY IO
+        3, 12, 36, 39, 34, 35, 32, 33, 25, 26, 27, 14, 15, 0,      // BUTTON IO
+        4, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY LED IO
+        6, 3, 23 + 50, 21 + 50, 18 + 50, // PWM1 IO
+        7, 3, 22 + 50, 19 + 50, 5 + 50, // PWM2 IO
+
+        99 // END
+    },
+    {
+        "书记6路双色",                // 6 PWM
+        1, 1, 2,                     // LED IO
+        //3, 6, 0, 1, 2, 3, 8, 9,      // BUTTON IO
+        //4, 6, 4, 5, 6, 7, 12, 13,    // RELAY LED IO
+        6, 6, 23, 21, 18, 17, 4, 33, // PWM1 IO
+        7, 6, 22, 19, 5, 16, 32, 25, // PWM2 IO
 
         99 // END
     },

@@ -77,10 +77,6 @@ void Relay::init()
         channels++;
 
         pinMode(RELAY_PIN[ch], OUTPUT); // 继电器
-        if (RELAY_LED_PIN[ch] != 99)
-        {
-            pinMode(RELAY_LED_PIN[ch], OUTPUT); // LED
-        }
     }
 
 #ifdef USE_DIMMING
@@ -94,9 +90,12 @@ void Relay::init()
 #endif
 
     strcpy(powerStatTopic, Mqtt::getStatTopic(F("power1")).c_str());
-
     for (uint8_t ch = 0; ch < channels; ch++)
     {
+        if (RELAY_LED_PIN[ch] != 99)
+        {
+            pinMode(RELAY_LED_PIN[ch], OUTPUT); // LED
+        }
         if (BOTTON_PIN[ch] != 99)
         {
             pinMode(BOTTON_PIN[ch], INPUT_PULLUP);

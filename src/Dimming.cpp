@@ -38,12 +38,7 @@ void Dimming::init(Relay *_relay)
             loadPWM(MAX_PWM_NUM * 2 - 1 - ch, PWM_TEMPERATURE_PIN[ch]);
         }
 
-        // LED
         relay->channels++;
-        if (RELAY_LED_PIN[relay->channels - 1] != 99)
-        {
-            pinMode(RELAY_LED_PIN[relay->channels - 1], OUTPUT); // LED
-        }
     }
 
 #ifdef ESP8266

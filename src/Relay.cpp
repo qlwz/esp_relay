@@ -160,7 +160,7 @@ void Relay::loop()
 #endif
     for (size_t ch = 0; ch < channels; ch++)
     {
-        cheackButton(ch);
+        checkButton(ch);
     }
 
 #ifdef USE_RCSWITCH
@@ -982,7 +982,7 @@ void Relay::switchRelay(uint8_t ch, bool isOn, bool isSave)
     }
 }
 
-void Relay::cheackButton(uint8_t ch)
+void Relay::checkButton(uint8_t ch)
 {
     if (BOTTON_PIN[ch] == 99)
     {

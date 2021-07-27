@@ -26,7 +26,6 @@ class RadioReceive;
 class Relay : public Module
 {
 private:
-
     char powerStatTopic[80];
 
     // 按键
@@ -38,7 +37,7 @@ private:
     uint8_t buttonStateFlag[MAX_RELAY_NUM + MAX_PWM_NUM];
     uint8_t switchCount[MAX_RELAY_NUM + MAX_PWM_NUM];
     unsigned long lastTime[MAX_RELAY_NUM + MAX_PWM_NUM];
-    void cheackButton(uint8_t ch);
+    void checkButton(uint8_t ch);
 
     // PWM
     uint16_t ledLevel = 0;

@@ -67,9 +67,14 @@ void Dimming::loadPWM(uint8_t ch, uint8_t pin)
     uint8_t pin2 = pwm_invert ? pin - 50 : pin;
     pinMode(pin2, OUTPUT);
 #ifdef ESP32
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32C3
+    ledcSetup(ch, 19531, 12); // 12 kHz PWM, 8-bit resolutionXS
+    pinMatrixOutAttach(pin2, LEDC_LS_SIG_OUT0_IDX + ch, pwm_invert, false);
+#else
     //19531
     ledcSetup(ch, relay->config.module_type == Yeelight ? 3072 : 19531, 12); // 12 kHz PWM, 8-bit resolutionXS
-    pinMatrixOutAttach(pin2, LEDC_HS_SIG_OUT0_IDX + ch, pwm_invert, false);
+    pinMatrixOutAttach(pin2, ((ch / 8) ? LEDC_LS_SIG_OUT0_IDX : LEDC_HS_SIG_OUT0_IDX) + (ch % 8), pwm_invert, false);
+#endif
     pwm_invert = false;
 #endif
     digitalWrite(pin2, pwm_invert ? HIGH : LOW);

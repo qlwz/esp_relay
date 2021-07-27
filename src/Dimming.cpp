@@ -176,7 +176,8 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
         }
         if (!pwmTicker.active())
         {
-            pwmTicker.attach_ms(10, []() { ((Relay *)module)->dimming->animate(); });
+            pwmTicker.attach_ms(10, []()
+                                { ((Relay *)module)->dimming->animate(); });
         }
         return;
     }
@@ -253,7 +254,8 @@ void Dimming::switchRelayPWM(uint8_t ch, bool isOn, bool isSave)
 
     if (!pwmTicker.active())
     {
-        pwmTicker.attach_ms(10, []() { ((Relay *)module)->dimming->animate(); });
+        pwmTicker.attach_ms(10, []()
+                            { ((Relay *)module)->dimming->animate(); });
     }
 }
 

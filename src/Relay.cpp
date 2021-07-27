@@ -861,7 +861,8 @@ void Relay::ledPWM(uint8_t ch, bool isOn)
     {
         if (!ledTicker.active())
         {
-            ledTicker.attach_ms(config.led_time, []() { ((Relay *)module)->ledTickerHandle(); });
+            ledTicker.attach_ms(config.led_time, []()
+                                { ((Relay *)module)->ledTickerHandle(); });
             // Log::Info(PSTR("ledTicker active"));
         }
     }

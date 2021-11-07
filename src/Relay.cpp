@@ -5,9 +5,6 @@
 #ifdef USE_HOMEKIT
 #include "HomeKit.h"
 #endif
-#ifdef USE_SHUJI
-#include <ShiftRegister74HC595.h>
-#endif
 
 uint8_t LED_PIN = 99;
 uint8_t RFRECV_PIN = 99;
@@ -25,7 +22,12 @@ uint8_t ROT_PIN[2];
 #endif
 
 #ifdef USE_SHUJI
-ShiftRegister74HC595<2> sr(4, 17, 16);
+#include <ShiftRegister74HC595.h>
+#include <Wire.h>
+#include <SparkFunSX1509.h>
+
+ShiftRegister74HC595<2> *sr = NULL;
+SX1509 *sx = NULL;
 #endif
 
 #pragma region 继承
@@ -45,6 +47,31 @@ void Relay::init()
         Led::init(LED_PIN > 50 ? LED_PIN - 50 : LED_PIN, LED_PIN > 50 ? LOW : HIGH);
     }
 
+#ifdef USE_SHUJI
+    if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
+    {
+        sr = new ShiftRegister74HC595<2>(4, 17, 16);
+        sr->set(7, true);
+        sr->set(15, true);
+    }
+    else if (config.module_type == Shuji_CH6)
+    {
+        pinMode(18, OUTPUT);
+        digitalWrite(18, HIGH);
+    }
+    else if (config.module_type == Shuji_PWM6)
+    {
+        sx = new SX1509();
+        Wire.setPins(27, 14);
+        sx->begin(0x3E);
+
+        sx->pinMode(7, OUTPUT);
+        sx->digitalWrite(7, HIGH);
+        sx->pinMode(15, OUTPUT);
+        sx->digitalWrite(15, HIGH);
+    }
+#endif
+
 #ifdef USE_RCSWITCH
     if (RFRECV_PIN != 99)
     {
@@ -63,10 +90,6 @@ void Relay::init()
         channels++;
 
         pinMode(RELAY_PIN[ch], OUTPUT); // 继电器
-        if (RELAY_LED_PIN[ch] != 99)
-        {
-            pinMode(RELAY_LED_PIN[ch], OUTPUT); // LED
-        }
     }
 
 #ifdef USE_DIMMING
@@ -74,13 +97,18 @@ void Relay::init()
     {
         dimming = new Dimming();
         dimming->init(this);
+        strcpy(brightnessStatTopic, Mqtt::getStatTopic(F("brightness1")).c_str());
+        strcpy(color_tempStatTopic, Mqtt::getStatTopic(F("color_temp1")).c_str());
     }
 #endif
 
     strcpy(powerStatTopic, Mqtt::getStatTopic(F("power1")).c_str());
-
     for (uint8_t ch = 0; ch < channels; ch++)
     {
+        if (RELAY_LED_PIN[ch] != 99)
+        {
+            pinMode(RELAY_LED_PIN[ch], OUTPUT); // LED
+        }
         if (BOTTON_PIN[ch] != 99)
         {
             pinMode(BOTTON_PIN[ch], INPUT_PULLUP);
@@ -105,14 +133,28 @@ void Relay::init()
         }
     }
 
-    checkCanLed(true);
 #ifdef USE_SHUJI
-    if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
+    if (config.module_type == Shuji_PWM6)
     {
-        sr.set(7, true);
-        sr.set(15, true);
+        uint8_t b[6] = {0, 1, 2, 8, 9, 10};
+        uint8_t l[6] = {4, 5, 6, 12, 13, 14};
+        for (uint8_t ch = 0; ch < 6; ch++)
+        {
+            RELAY_LED_PIN[ch] = l[ch];
+            BOTTON_PIN[ch] = b[ch];
+
+            sx->pinMode(RELAY_LED_PIN[ch], OUTPUT); // LED
+
+            sx->pinMode(BOTTON_PIN[ch], INPUT_PULLUP);
+            if (!sx->digitalRead(BOTTON_PIN[ch]))
+            {
+                buttonStateFlag[ch] |= DEBOUNCED_STATE | UNSTABLE_STATE;
+            }
+        }
     }
 #endif
+
+    checkCanLed(true);
 }
 
 bool Relay::moduleLed()
@@ -151,7 +193,7 @@ void Relay::loop()
 #endif
     for (size_t ch = 0; ch < channels; ch++)
     {
-        cheackButton(ch);
+        checkButton(ch);
     }
 
 #ifdef USE_RCSWITCH
@@ -179,7 +221,14 @@ void Relay::perSecondDo()
 
 void Relay::readConfig()
 {
-    Config::moduleReadConfig(MODULE_CFG_VERSION, sizeof(RelayConfigMessage), RelayConfigMessage_fields, &config);
+    bool isOk = false;
+#ifdef USE_UFILESYS
+    isOk = Config::FSReadConfig(RELAY_CONFIG, RELAY_CFG_VERSION, sizeof(RelayConfigMessage), RelayConfigMessage_fields, &config, configCrc);
+#endif
+    if (!isOk)
+    {
+        Config::moduleReadConfig(RELAY_CFG_VERSION, sizeof(RelayConfigMessage), RelayConfigMessage_fields, &config);
+    }
     if (config.led_light == 0)
     {
         config.led_light = 100;
@@ -230,13 +279,23 @@ void Relay::resetConfig()
 
 void Relay::saveConfig(bool isEverySecond)
 {
-    Config::moduleSaveConfig(MODULE_CFG_VERSION, RelayConfigMessage_size, RelayConfigMessage_fields, &config);
+#ifdef USE_UFILESYS
+    if (Config::FSSaveConfig(RELAY_CONFIG, RELAY_CFG_VERSION, RelayConfigMessage_size, RelayConfigMessage_fields, &config, configCrc))
+    {
+        //globalConfig.cfg_version = 0;
+        //globalConfig.module_crc = 0;
+        //globalConfig.module_cfg.size = 0;
+        //memset(globalConfig.module_cfg.bytes, 0, 500);
+        //return;
+    }
+#endif
+    Config::moduleSaveConfig(RELAY_CFG_VERSION, RelayConfigMessage_size, RelayConfigMessage_fields, &config);
 }
 #pragma endregion
 
 #pragma region MQTT
 
-void Relay::mqttCallback(char *topic, char *payload, char *cmnd)
+bool Relay::mqttCallback(char *topic, char *payload, char *cmnd)
 {
     if (strlen(cmnd) == 6 && strncmp(cmnd, "power", 5) == 0) // strlen("power1") = 6
     {
@@ -244,23 +303,36 @@ void Relay::mqttCallback(char *topic, char *payload, char *cmnd)
         if (ch < channels)
         {
             switchRelay(ch, (strcmp(payload, "on") == 0 ? true : (strcmp(payload, "off") == 0 ? false : !bitRead(lastState, ch))), true);
-            return;
+            return true;
         }
     }
     else if (strcmp(cmnd, "report") == 0)
     {
         reportPower();
+        return true;
     }
 #ifdef USE_DIMMING
     else if (dimming)
     {
-        dimming->mqttCallback(topic, payload, cmnd);
+        bool result = dimming->mqttCallback(topic, payload, cmnd);
+        if (result)
+        {
+            return true;
+        }
     }
 #endif
+    return false;
 }
 
 void Relay::mqttConnected()
 {
+#ifdef USE_DIMMING
+    if (PWM_BRIGHTNESS_PIN[0] != 99)
+    {
+        strcpy(brightnessStatTopic, Mqtt::getStatTopic(F("brightness1")).c_str());
+        strcpy(color_tempStatTopic, Mqtt::getStatTopic(F("color_temp1")).c_str());
+    }
+#endif
     strcpy(powerStatTopic, Mqtt::getStatTopic(F("power1")).c_str());
     if (globalConfig.mqtt.discovery)
     {
@@ -789,7 +861,8 @@ void Relay::ledPWM(uint8_t ch, bool isOn)
     {
         if (!ledTicker.active())
         {
-            ledTicker.attach_ms(config.led_time, []() { ((Relay *)module)->ledTickerHandle(); });
+            ledTicker.attach_ms(config.led_time, []()
+                                { ((Relay *)module)->ledTickerHandle(); });
             // Log::Info(PSTR("ledTicker active"));
         }
     }
@@ -805,15 +878,17 @@ void Relay::led(uint8_t ch, bool isOn)
 #ifdef USE_SHUJI
     if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
     {
-        if (ch < 6)
-        {
-            ch += 1;
-        }
-        else
-        {
-            ch += 3;
-        }
-        sr.set(ch, !isOn);
+        sr->set(ch < 6 ? ch + 1 : ch + 3, !isOn);
+        return;
+    }
+    else if (config.module_type == Shuji_CH6)
+    {
+        digitalWrite(RELAY_LED_PIN[ch], isOn ? HIGH : LOW);
+        return;
+    }
+    else if (config.module_type == Shuji_PWM6)
+    {
+        sx->digitalWrite(RELAY_LED_PIN[ch], isOn);
         return;
     }
 #endif
@@ -857,12 +932,34 @@ bool Relay::checkCanLed(bool re)
         }
         Relay::canLed = result;
         Log::Info(result ? PSTR("led can light") : PSTR("led can not light"));
+#ifdef USE_SHUJI
+        if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
+        {
+            sr->set(7, result);
+            sr->set(15, result);
+        }
+        else if (config.module_type == Shuji_CH6)
+        {
+            pinMode(18, OUTPUT);
+            digitalWrite(18, result && config.led_type != 0 ? HIGH : LOW);
+        }
+        else if (config.module_type == Shuji_PWM6)
+        {
+            sx->digitalWrite(7, result);
+            sx->digitalWrite(15, result);
+        }
+#endif
         for (uint8_t ch = 0; ch < channels; ch++)
         {
 #ifdef USE_SHUJI
-            if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12)
+            if (config.module_type == Shuji_CH6_PWM6 || config.module_type == Shuji_CH12 || config.module_type == Shuji_PWM6)
             {
                 result &&config.led_type != 0 ? led(ch, bitRead(lastState, ch)) : led(ch, true);
+                continue;
+            }
+            else if (config.module_type == Shuji_CH6)
+            {
+                digitalWrite(RELAY_LED_PIN[ch], result && config.led_type != 0 && bitRead(lastState, ch) ? HIGH : LOW);
                 continue;
             }
 #endif
@@ -929,13 +1026,18 @@ void Relay::switchRelay(uint8_t ch, bool isOn, bool isSave)
     }
 }
 
-void Relay::cheackButton(uint8_t ch)
+void Relay::checkButton(uint8_t ch)
 {
     if (BOTTON_PIN[ch] == 99)
     {
         return;
     }
+
+#ifdef USE_SHUJI
+    bool currentState = config.module_type == Shuji_PWM6 ? !sx->digitalRead(BOTTON_PIN[ch]) : digitalRead(BOTTON_PIN[ch]);
+#else
     bool currentState = digitalRead(BOTTON_PIN[ch]);
+#endif
     if (currentState != ((buttonStateFlag[ch] & UNSTABLE_STATE) != 0))
     {
         buttonTimingStart[ch] = millis();
@@ -949,18 +1051,18 @@ void Relay::cheackButton(uint8_t ch)
             uint8_t pwmch = ch - dimming->pwmstartch;
             if (millis() - 100 > lastTime[ch])
             {
-                if (!bitRead(dimmingState[pwmch], 0))
-                {
-                    if (config.brightness[pwmch] < 100)
-                    {
-                        config.brightness[pwmch]++;
-                    }
-                }
-                else
+                if (bitRead(dimmingState[pwmch], 0))
                 {
                     if (config.brightness[pwmch] > 2)
                     {
                         config.brightness[pwmch]--;
+                    }
+                }
+                else
+                {
+                    if (config.brightness[pwmch] < 100)
+                    {
+                        config.brightness[pwmch]++;
                     }
                 }
                 //Log::Info(PSTR("brightness %d : %d"), ch + 1, config.brightness[pwmch]);
@@ -1190,17 +1292,23 @@ void Relay::reportPower()
 
 void Relay::reportChannel(uint8_t ch)
 {
+    if (!bitRead(Config::statusFlag, 1))
+    {
+        return;
+    }
     powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
     Mqtt::publish(powerStatTopic, bitRead(lastState, ch) ? "on" : "off", globalConfig.mqtt.retain);
 
 #ifdef USE_DIMMING
     if (dimming && ch >= dimming->pwmstartch)
     {
+        brightnessStatTopic[strlen(brightnessStatTopic) - 1] = ch + 49; // 48 + 1 + ch
         uint8_t pwmch = ch - dimming->pwmstartch;
-        Mqtt::publish(Mqtt::getStatTopic(F("brightness")) + (ch + 1), String(config.brightness[pwmch]).c_str(), globalConfig.mqtt.retain);
+        Mqtt::publish(brightnessStatTopic, String(config.brightness[pwmch]).c_str(), globalConfig.mqtt.retain);
         if (PWM_TEMPERATURE_PIN[pwmch] != 99)
         {
-            Mqtt::publish(Mqtt::getStatTopic(F("color_temp")) + (ch + 1), String(config.color_temp[pwmch]).c_str(), globalConfig.mqtt.retain);
+            color_tempStatTopic[strlen(color_tempStatTopic) - 1] = ch + 49; // 48 + 1 + ch
+            Mqtt::publish(color_tempStatTopic, String(config.color_temp[pwmch]).c_str(), globalConfig.mqtt.retain);
         }
     }
 #endif

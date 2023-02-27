@@ -356,18 +356,30 @@ void Relay::mqttDiscovery(bool isEnable)
         {
             cmndTopic[strlen(cmndTopic) - 1] = ch + 49;           // 48 + 1 + ch
             powerStatTopic[strlen(powerStatTopic) - 1] = ch + 49; // 48 + 1 + ch
-            sprintf(message, PSTR("{\"name\":\"%s_ch%d\","
-                                  "\"cmd_t\":\"%s\","
-                                  "\"stat_t\":\"%s\","
-                                  "\"pl_off\":\"off\","
-                                  "\"pl_on\":\"on\","
-                                  "\"avty_t\":\"%s\","
-                                  "\"pl_avail\":\"online\","
-                                  "\"pl_not_avail\":\"offline\"}"),
+            sprintf(message, PSTR("{\"name\":\"%s_%d\","
+                                  "\"command_topic\":\"%s\","
+                                  "\"state_topic\":\"%s\","
+                                  "\"payload_off\":\"off\","
+                                  "\"payload_on\":\"on\","
+                                  "\"availability_topic\":\"%s\","
+                                  "\"payload_available\":\"online\","
+                                  "\"payload_not_available\":\"offline\","
+                                  "\"unique_id\":\"%s_%d\","
+                                  "\"device\":{"
+                                  "\"identifiers\":\"%s\","
+                                  "\"name\":\"%s\","
+                                  "\"sw_version\":\"esp_relay-%s\","
+                                  "\"model\":\"esp_relay\","
+                                  "\"manufacturer\":\"espressif\"}}"
+                                  ),
                     UID, (ch + 1),
                     cmndTopic,
                     powerStatTopic,
-                    availability.c_str());
+                    availability.c_str(),
+                    UID, (ch + 1),
+                    UID,
+                    UID,
+                    getModuleVersion().c_str());
 #ifdef USE_DIMMING
             if (dimming && ch >= dimming->pwmstartch)
             {

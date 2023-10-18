@@ -165,52 +165,62 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
     },
 #else
     {
-        "4路调光",            // 4 PWM
-        1, 1, 2,              // LED IO
-        3, 4, 36, 39, 34, 35, // BUTTON IO
-        4, 4, 32, 33, 25, 26, // RELAY LED IO
-
-        6, 4, 22 + 50, 21 + 50, 19 + 50, 18 + 50, // PWM1 IO
-
-        99 // END
-    },
-    {
-        "2路双色",            // 1 Channel & 2 PWM
-        1, 1, 2 + 50,         // LED IO
-        3, 4, 36, 39, 34, 35, // BUTTON IO
-        4, 4, 32, 33, 25, 26, // RELAY LED IO
-        5, 1, 4,              // 433 IO
-
-        6, 2, 22 + 50, 19 + 50, // PWM1 IO
-        7, 2, 21 + 50, 18 + 50, // PWM2 IO
+        "3路开关",       // 3 Channel (ESP32-C3-01M)
+        1, 1, 18 + 50,   // LED IO
+        2, 3, 1, 2, 5, // RELAY IO
+        3, 3, 10, 7, 6,  // BUTTON IO
+        4, 3, 9, 8, 4,  // RELAY LED IO
+        5, 1, 3,        // 433 IO
 
         99 // END
     },
-    {
-        "主灯&筒灯",  // 1 Channel & 2 PWM
-        1, 1, 2 + 50, // LED IO
-        2, 1, 23,     // RELAY IO
-        3, 2, 36, 39, // BUTTON IO
-        4, 2, 32, 33, // RELAY LED IO
-        5, 1, 4,      // 433 IO
+    // {
+    //     "4路调光",            // 4 PWM
+    //     1, 1, 2,              // LED IO
+    //     3, 4, 36, 39, 34, 35, // BUTTON IO
+    //     4, 4, 32, 33, 25, 26, // RELAY LED IO
 
-        6, 1, 22 + 50, // PWM1 IO
-        7, 1, 21 + 50, // PWM2 IO
+    //     6, 4, 22 + 50, 21 + 50, 19 + 50, 18 + 50, // PWM1 IO
 
-        99 // END
-    },
-    {
-        "Yeelight",   // 1 Channel & 2 PWM
-        1, 1, 2 + 50, // LED IO
-        3, 1, 36,     // BUTTON IO
-        4, 1, 32,     // RELAY LED IO
-        5, 1, 4,      // 433 IO
+    //     99 // END
+    // },
+    // {
+    //     "2路双色",            // 1 Channel & 2 PWM
+    //     1, 1, 2 + 50,         // LED IO
+    //     3, 4, 36, 39, 34, 35, // BUTTON IO
+    //     4, 4, 32, 33, 25, 26, // RELAY LED IO
+    //     5, 1, 4,              // 433 IO
 
-        6, 1, 22, // PWM1 IO
-        7, 1, 21, // PWM2 IO
+    //     6, 2, 22 + 50, 19 + 50, // PWM1 IO
+    //     7, 2, 21 + 50, 18 + 50, // PWM2 IO
 
-        99 // END
-    },
+    //     99 // END
+    // },
+    // {
+    //     "主灯&筒灯",  // 1 Channel & 2 PWM
+    //     1, 1, 2 + 50, // LED IO
+    //     2, 1, 23,     // RELAY IO
+    //     3, 2, 36, 39, // BUTTON IO
+    //     4, 2, 32, 33, // RELAY LED IO
+    //     5, 1, 4,      // 433 IO
+
+    //     6, 1, 22 + 50, // PWM1 IO
+    //     7, 1, 21 + 50, // PWM2 IO
+
+    //     99 // END
+    // },
+    // {
+    //     "Yeelight",   // 1 Channel & 2 PWM
+    //     1, 1, 2 + 50, // LED IO
+    //     3, 1, 36,     // BUTTON IO
+    //     4, 1, 32,     // RELAY LED IO
+    //     5, 1, 4,      // 433 IO
+
+    //     6, 1, 22, // PWM1 IO
+    //     7, 1, 21, // PWM2 IO
+
+    //     99 // END
+    // },
 #ifdef USE_SHUJI
     {
         "书记6路调光",                                              // 6 Channel

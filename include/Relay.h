@@ -80,7 +80,7 @@ public:
     void init();
     String getModuleName() { return F("relay"); }
     String getModuleCNName();
-    String getModuleVersion() { return F("2023.10.16.2200"); }
+    String getModuleVersion() { return F("2023.11.03.1000"); }
     String getModuleAuthor() { return F("情留メ蚊子"); }
     bool moduleLed();
 

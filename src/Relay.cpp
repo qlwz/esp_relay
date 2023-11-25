@@ -237,7 +237,8 @@ void Relay::readConfig()
     {
         config.led_time = 2;
     }
-    ledLight = config.led_light * 10 + 23;
+    // ledLight = config.led_light * 10 + 23;
+        ledLight = RELAY_LED_LIGHT;
 
     if (config.module_type >= MAXMODULE)
     {
@@ -740,7 +741,8 @@ void Relay::httpSetting(WebServer *server)
     if (server->hasArg(F("led_light")))
     {
         config.led_light = server->arg(F("led_light")).toInt();
-        ledLight = config.led_light * 10 + 23;
+        // ledLight = config.led_light * 10 + 23;
+        ledLight = RELAY_LED_LIGHT;
     }
     if (server->hasArg(F("relay_led_time")))
     {

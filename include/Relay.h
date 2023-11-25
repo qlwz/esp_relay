@@ -15,6 +15,8 @@ static const uint8_t DEBOUNCED_STATE = 0b00000001;
 static const uint8_t UNSTABLE_STATE = 0b00000010;
 static const uint8_t BUTTON_DEBOUNCE_TIME = 50; // 消抖时间
 
+#define RELAY_LED_LIGHT config.led_light*2.55  //定义开关面板Led指示灯PWM取值范围0-255
+
 #ifdef USE_DIMMING
 class Dimming;
 #endif

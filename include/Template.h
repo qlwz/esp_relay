@@ -41,31 +41,32 @@ typedef struct MYTMPLT
 enum SupportedModules
 {
 #ifdef ESP8266
-    SONOFF_BASIC,
+    // SONOFF_BASIC,
     CH1,
     CH2,
     CH3,
-    iciness_CH3,
-    Yeelight,
-    WEILE,
-#ifdef USE_CAIJI
-    ji_CH4,
-    ji_CH8,
-#endif
-    Kong,
+    // iciness_CH3,
+    // Yeelight,
+    // WEILE,
+// #ifdef USE_CAIJI
+//     ji_CH4,
+//     ji_CH8,
+// #endif
+//     Kong,
 #else
-    PMW4,
-    CH2_PWM,
-    CH1_PWM1,
-    Yeelight,
-#ifdef USE_SHUJI
-    Shuji_CH6_PWM6,
-    Shuji_CH12,
-    Shuji_CH5,
-    Shuji_CH6,
-    Shuji_CH6_PWM3,
-    Shuji_PWM6,
-#endif
+    ESP32CH3,
+//     PMW4,
+//     CH2_PWM,
+    // CH1_PWM1,
+//     Yeelight,
+// #ifdef USE_SHUJI
+//     Shuji_CH6_PWM6,
+//     Shuji_CH12,
+//     Shuji_CH5,
+//     Shuji_CH6,
+//     Shuji_CH6_PWM3,
+//     Shuji_PWM6,
+// #endif
 #endif
 
     MAXMODULE // 占位
@@ -74,13 +75,13 @@ enum SupportedModules
 // TLV 结构 1：LED  2：RELAY  3：BUTTON  4：RELAY LED  5：433  6：PWM1  7：PWM2  8：ROT  99：结束  IO>50 为反
 const mytmplt Modules[MAXMODULE] PROGMEM = {
 #ifdef ESP8266
-    {
-        "Sonoff Basic", // Sonoff Basic (ESP8266)
-        2, 1, 12,       // RELAY IO
-        3, 1, 0,        // BUTTON IO
+    // {
+    //     "Sonoff Basic", // Sonoff Basic (ESP8266)
+    //     2, 1, 12,       // RELAY IO
+    //     3, 1, 0,        // BUTTON IO
 
-        99 // END
-    },
+    //     99 // END
+    // },
     {
         "1路开关",     // 1 Channel (ESP8285)
         1, 1, 16 + 50, // LED IO
@@ -111,58 +112,58 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
 
         99 // END
     },
-    {
-        "iciness CH3",    // 3 Channel (ESP8285)
-        2, 3, 14, 15, 12, // RELAY IO
-        3, 3, 9, 10, 2,   // BUTTON IO
-        4, 3, 4, 5, 16,   // RELAY LED IO
+//     {
+//         "iciness CH3",    // 3 Channel (ESP8285)
+//         2, 3, 14, 15, 12, // RELAY IO
+//         3, 3, 9, 10, 2,   // BUTTON IO
+//         4, 3, 4, 5, 16,   // RELAY LED IO
 
-        99 // END
-    },
-    {
-        "Yeelight",    // 3 Channel (ESP32)
-        1, 1, 16 + 50, // LED IO
-        3, 1, 4,       // BUTTON IO
-        5, 1, 13,      // 433 IO
+//         99 // END
+//     },
+//     {
+//         "Yeelight",    // 3 Channel (ESP32)
+//         1, 1, 16 + 50, // LED IO
+//         3, 1, 4,       // BUTTON IO
+//         5, 1, 13,      // 433 IO
 
-        6, 1, 5,  // PWM1 IO
-        7, 1, 12, // PWM2 IO
+//         6, 1, 5,  // PWM1 IO
+//         7, 1, 12, // PWM2 IO
 
-        99 // END
-    },
-    {
-        "威乐回水器",  // 2 Channel (ESP8285)
-        1, 1, 16 + 50, // LED IO
-        2, 2, 14, 12,  // RELAY IO
-        5, 1, 13,      // 433 IO
+//         99 // END
+//     },
+//     {
+//         "威乐回水器",  // 2 Channel (ESP8285)
+//         1, 1, 16 + 50, // LED IO
+//         2, 2, 14, 12,  // RELAY IO
+//         5, 1, 13,      // 433 IO
 
-        99 // END
-    },
-#ifdef USE_CAIJI
-    {
-        "菜鸡 CH4",  // 4 Channel (ESP8285)
-        1, 1, 16 + 50,   // LED IO
-        2, 4, 14, 12, 5, 15, // RELAY IO
-        3, 4, 4, 9, 10, 2,  // BUTTON IO
-        5, 1, 13,        // 433 IO
+//         99 // END
+//     },
+// #ifdef USE_CAIJI
+//     {
+//         "菜鸡 CH4",  // 4 Channel (ESP8285)
+//         1, 1, 16 + 50,   // LED IO
+//         2, 4, 14, 12, 5, 15, // RELAY IO
+//         3, 4, 4, 9, 10, 2,  // BUTTON IO
+//         5, 1, 13,        // 433 IO
 
-        99 // END
-    },
-    {
-        "菜鸡 统一供电",  // 8 Channel (ESP8285)
-        2, 8, 3, 5, 4, 0, 13, 12, 14, 16, // RELAY IO
+//         99 // END
+//     },
+//     {
+//         "菜鸡 统一供电",  // 8 Channel (ESP8285)
+//         2, 8, 3, 5, 4, 0, 13, 12, 14, 16, // RELAY IO
 
-        99 // END
-    },
-#endif
-    {
-        "孔总",  // 3 Channel (ESP8285)
-        1, 1, 13 + 50,   // LED IO
-        2, 3, 12, 5, 4, // RELAY IO
-        3, 3, 0, 9, 10,  // BUTTON IO
+//         99 // END
+//     },
+// #endif
+//     {
+//         "孔总",  // 3 Channel (ESP8285)
+//         1, 1, 13 + 50,   // LED IO
+//         2, 3, 12, 5, 4, // RELAY IO
+//         3, 3, 0, 9, 10,  // BUTTON IO
 
-        99 // END
-    },
+//         99 // END
+//     },
 #else
     {
         "3路开关",       // 3 Channel (ESP32-C3-01M)
@@ -221,68 +222,68 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
 
     //     99 // END
     // },
-#ifdef USE_SHUJI
-    {
-        "书记6路调光",                                              // 6 Channel
-        1, 1, 2 + 50,                                              // LED IO
-        2, 6, 12, 12, 12, 12, 12, 12,                              // RELAY IO
-        3, 12, 36, 39, 34, 35, 32, 33, 25, 26, 27, 14, 15, 0,      // BUTTON IO
-        4, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY LED IO
-        6, 6, 23 + 50, 22 + 50, 21 + 50, 19 + 50, 18 + 50, 5 + 50, // PWM1 IO
+// #ifdef USE_SHUJI
+//     {
+//         "书记6路调光",                                              // 6 Channel
+//         1, 1, 2 + 50,                                              // LED IO
+//         2, 6, 12, 12, 12, 12, 12, 12,                              // RELAY IO
+//         3, 12, 36, 39, 34, 35, 32, 33, 25, 26, 27, 14, 15, 0,      // BUTTON IO
+//         4, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY LED IO
+//         6, 6, 23 + 50, 22 + 50, 21 + 50, 19 + 50, 18 + 50, 5 + 50, // PWM1 IO
 
-        99 // END
-    },
-    {
-        "书记12路开关",                                             // 12 Channel
-        1, 1, 2 + 50,                                              // LED IO
-        2, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY IO
-        3, 12, 36, 39, 34, 35, 32, 33, 25, 26, 27, 14, 15, 0,      // BUTTON IO
-        4, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY LED IO
+//         99 // END
+//     },
+//     {
+//         "书记12路开关",                                             // 12 Channel
+//         1, 1, 2 + 50,                                              // LED IO
+//         2, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY IO
+//         3, 12, 36, 39, 34, 35, 32, 33, 25, 26, 27, 14, 15, 0,      // BUTTON IO
+//         4, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY LED IO
 
-        99 // END
-    },
-    {
-        "1开关&4路调光",            // 4 PWM
-        1, 1, 2,              // LED IO
-        2, 1, 23,     // RELAY IO
-        3, 5, 12, 36, 39, 34, 35, // BUTTON IO
-        4, 5, 12, 32, 33, 25, 26, // RELAY LED IO
+//         99 // END
+//     },
+//     {
+//         "1开关&4路调光",            // 4 PWM
+//         1, 1, 2,              // LED IO
+//         2, 1, 23,     // RELAY IO
+//         3, 5, 12, 36, 39, 34, 35, // BUTTON IO
+//         4, 5, 12, 32, 33, 25, 26, // RELAY LED IO
 
-        6, 4, 22 + 50, 21 + 50, 19 + 50, 18 + 50, // PWM1 IO
+//         6, 4, 22 + 50, 21 + 50, 19 + 50, 18 + 50, // PWM1 IO
 
-        99 // END
-    },
-    {
-        "书记6路开关",                                             // 6 Channel
-        1, 1, 2 + 50,                                              // LED IO
-        2, 6, 12, 12, 12, 12, 12, 12,     // RELAY IO
-        3, 6, 36, 39, 34, 35, 32, 33,      // BUTTON IO
-        4, 6, 25, 26, 27, 14, 4, 5,     // RELAY LED IO
+//         99 // END
+//     },
+//     {
+//         "书记6路开关",                                             // 6 Channel
+//         1, 1, 2 + 50,                                              // LED IO
+//         2, 6, 12, 12, 12, 12, 12, 12,     // RELAY IO
+//         3, 6, 36, 39, 34, 35, 32, 33,      // BUTTON IO
+//         4, 6, 25, 26, 27, 14, 4, 5,     // RELAY LED IO
 
-        99 // END
-    },
-    {
-        "书记3路双色",                                              // 6 Channel
-        1, 1, 2 + 50,                                              // LED IO
-        2, 6, 12, 12, 12, 12, 12, 12,                              // RELAY IO
-        3, 12, 36, 39, 34, 35, 32, 33, 25, 26, 27, 14, 15, 0,      // BUTTON IO
-        4, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY LED IO
-        6, 3, 23 + 50, 21 + 50, 18 + 50, // PWM1 IO
-        7, 3, 22 + 50, 19 + 50, 5 + 50, // PWM2 IO
+//         99 // END
+//     },
+//     {
+//         "书记3路双色",                                              // 6 Channel
+//         1, 1, 2 + 50,                                              // LED IO
+//         2, 6, 12, 12, 12, 12, 12, 12,                              // RELAY IO
+//         3, 12, 36, 39, 34, 35, 32, 33, 25, 26, 27, 14, 15, 0,      // BUTTON IO
+//         4, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,     // RELAY LED IO
+//         6, 3, 23 + 50, 21 + 50, 18 + 50, // PWM1 IO
+//         7, 3, 22 + 50, 19 + 50, 5 + 50, // PWM2 IO
 
-        99 // END
-    },
-    {
-        "书记6路双色",                // 6 PWM
-        1, 1, 2,                     // LED IO
-        //3, 6, 0, 1, 2, 3, 8, 9,      // BUTTON IO
-        //4, 6, 4, 5, 6, 7, 12, 13,    // RELAY LED IO
-        6, 6, 23, 21, 18, 17, 4, 33, // PWM1 IO
-        7, 6, 22, 19, 5, 16, 32, 25, // PWM2 IO
+//         99 // END
+//     },
+//     {
+//         "书记6路双色",                // 6 PWM
+//         1, 1, 2,                     // LED IO
+//         //3, 6, 0, 1, 2, 3, 8, 9,      // BUTTON IO
+//         //4, 6, 4, 5, 6, 7, 12, 13,    // RELAY LED IO
+//         6, 6, 23, 21, 18, 17, 4, 33, // PWM1 IO
+//         7, 6, 22, 19, 5, 16, 32, 25, // PWM2 IO
 
-        99 // END
-    },
-#endif
+//         99 // END
+//     },
+// #endif
 #endif
 };
 

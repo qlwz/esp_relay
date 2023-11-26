@@ -256,21 +256,25 @@ void Relay::resetConfig()
     config.led_type = 1;
     config.max_pwm = 100;
 
+// 定义开关的默认模块
 #ifdef WIFI_SSID
 #ifdef ESP8266
-#ifdef USE_DIMMING
-    config.module_type = Yeelight;
+// #ifdef USE_DIMMING
+//     config.module_type = Yeelight;
+// #else
+//     config.module_type = CH3;
+// #endif
+    config.module_type = CH3;
 #else
-    config.module_type = CH1;
-#endif
-#else
-    config.module_type = CH1_PWM1;
+    config.module_type = ESP32CH3;
 #endif
     globalConfig.mqtt.interval = 60 * 60;
     globalConfig.debug.type = globalConfig.debug.type | 4;
-
-    config.switch_mode = 1;
-    config.led_type = 2;
+    config.power_on_state = 0;
+    config.power_mode = 0;
+    config.switch_mode = 0;
+    config.led_type = 1;
+    config.led_light = 100;
     config.led_start = 1800;
     config.led_end = 2300;
     config.led = 1;

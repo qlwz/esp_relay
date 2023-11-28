@@ -55,7 +55,7 @@ enum SupportedModules
 //     Kong,
 #else
     ESP32CH3,
-//     PMW4,
+    YULIUXUANXIANG,
 //     CH2_PWM,
     // CH1_PWM1,
 //     Yeelight,
@@ -167,6 +167,16 @@ const mytmplt Modules[MAXMODULE] PROGMEM = {
 #else
     {
         "3路开关",       // 3 Channel (ESP32-C3-01M)
+        1, 1, 18 + 50,   // LED IO
+        2, 3, 1, 2, 5, // RELAY IO
+        3, 3, 10, 7, 6,  // BUTTON IO
+        4, 3, 9, 8, 4,  // RELAY LED IO
+        5, 1, 3,        // 433 IO
+
+        99 // END
+    },
+    {
+        "预留选项",       // 3 Channel (ESP32-C3-01M)
         1, 1, 18 + 50,   // LED IO
         2, 3, 1, 2, 5, // RELAY IO
         3, 3, 10, 7, 6,  // BUTTON IO

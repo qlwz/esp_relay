@@ -251,7 +251,7 @@ void Relay::resetConfig()
     Log::Info(PSTR("moduleResetConfig . . . OK"));
     memset(&config, 0, sizeof(RelayConfigMessage));
     config.module_type = 0;
-    config.led_light = 100;   //指示灯亮度默认100
+    config.led_light = 50;
     config.led_time = 3;
     config.led_type = 1;
     config.max_pwm = 100;
